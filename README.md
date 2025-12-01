@@ -107,7 +107,7 @@ StudySync representa la convergencia de la productividad y la educación en una 
 ---
 
 ## 8. Licencia
-Este proyecto se distribuye bajo la Licencia **[Elegir Licencia, ej: MIT, GPL, etc.]**.
+Este proyecto se distribuye bajo la Licencia ** Aun no elegida**.
 
 ---
 
