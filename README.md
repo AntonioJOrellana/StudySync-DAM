@@ -61,7 +61,7 @@
 | **Backend (API)** | **Spring Boot (Java)** | Lógica de servidor, gestión de usuarios, estadísticas, y algoritmo SRS. |
 | **Base de Datos** | **MySQL / PostgreSQL** | Almacenamiento estructurado de datos de usuario, tareas y seguimiento SRS. |
 | **Diseño** | **Figma** | Prototipado y diseño de la interfaz minimalista. |
-| **Futura IA** | **Python** | [cite_start]Integración futura para generación de resúmenes y tarjetas automáticas[cite: 20]. |
+| **Futura IA** | **Python** | Integración futura para generación de resúmenes y tarjetas automáticas[cite: 20]. |
 
 ---
 
@@ -77,9 +77,9 @@
 
 ## 4. Guía de Uso
 
-1.  [cite_start]**Registro/Login:** Inicia sesión con Google o usa el Modo Sin Cuenta (guardado local).
-2.  [cite_start]**Pantalla "Hoy":** Visualiza rápidamente las clases, tareas pendientes y recordatorios importantes[cite: 7].
-3.  [cite_start]**Planificación:** Crea asignaturas y añade tareas, dándoles prioridad y fecha de entrega.
+1.  **Registro/Login:** Inicia sesión con Google o usa el Modo Sin Cuenta (guardado local).
+2.  **Pantalla "Hoy":** Visualiza rápidamente las clases, tareas pendientes y recordatorios importantes[cite: 7].
+3.  **Planificación:** Crea asignaturas y añade tareas, dándoles prioridad y fecha de entrega.
 4.  **Estudio Activo:** Inicia un Pomodoro en la materia elegida. [cite_start]Si lo completas, verás crecer tu planta/mascota virtual[cite: 9].
 5.  [cite_start]**Repaso:** Crea o importa mazos de tarjetas y usa el modo de repetición espaciada para memorizar eficazmente.
 
@@ -101,7 +101,7 @@ StudySync representa la convergencia de la productividad y la educación en una 
 ---
 
 ## 7. Contribuciones, Agradecimientos y Referencias
-* [cite_start]**Agradecimientos:** A los creadores de Anki, Forest, MyStudyLife, Notion y Todoist por la inspiración[cite: 11, 12, 23, 24, 33, 37, 41, 45, 52, 53, 55, 56, 57].
+* **Agradecimientos:** A los creadores de Anki, Forest, MyStudyLife, Notion y Todoist por la inspiración[cite: 11, 12, 23, 24, 33, 37, 41, 45, 52, 53, 55, 56, 57].
 * [cite_start]**Referencias de Investigación:** Zapier, Medium, Statista, AppMagic[cite: 58, 59].
 
 ---
@@ -112,5 +112,5 @@ Este proyecto se distribuye bajo la Licencia ** Aun no elegida**.
 ---
 
 ## 9. Contacto
-* [cite_start]**Nombre:** Antonio Jesús Orellana Orea [cite: 1]
+* **Nombre:** Antonio Jesús Orellana Orea [cite: 1]
 * **Correo Electrónico:** antoniojesusorellanaorea@gmail.com
