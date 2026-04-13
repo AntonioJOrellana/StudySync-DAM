@@ -1,107 +1,206 @@
--- #############################################################
--- SCRIPT COMPLETO: StudySync - Creación de Base de Datos y Datos Iniciales
--- Proyecto TFG DAM - Antonio Jesús Orellana Orea
--- #############################################################
+-- MySQL dump 10.13  Distrib 8.0.42, for Win64 (x86_64)
+--
+-- Host: localhost    Database: studysync
+-- ------------------------------------------------------
+-- Server version	8.0.42
 
--- 1. Crear y usar la Base de Datos
-CREATE DATABASE IF NOT EXISTS studysync
-DEFAULT CHARACTER SET utf8mb4
-DEFAULT COLLATE utf8mb4_0900_ai_ci;
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
-USE studysync;
+--
+-- Table structure for table `asignatura`
+--
 
--- 2. TABLA USUARIO
-CREATE TABLE IF NOT EXISTS USUARIO (
-    id_usuario INT PRIMARY KEY AUTO_INCREMENT,
-    correo VARCHAR(255) UNIQUE NOT NULL,
-    contrasena_hash VARCHAR(255) NOT NULL,
-    modo_sin_cuenta BOOLEAN DEFAULT FALSE,
-    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+DROP TABLE IF EXISTS `asignatura`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `asignatura` (
+  `id_asignatura` int NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(100) NOT NULL,
+  `color` varchar(7) DEFAULT NULL,
+  `id_usuario` int NOT NULL,
+  PRIMARY KEY (`id_asignatura`),
+  KEY `fk_asignatura_usuario` (`id_usuario`),
+  CONSTRAINT `fk_asignatura_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- 3. TABLA ASIGNATURA
-CREATE TABLE IF NOT EXISTS ASIGNATURA (
-    id_asignatura INT PRIMARY KEY AUTO_INCREMENT,
-    nombre VARCHAR(100) NOT NULL,
-    color VARCHAR(7), -- Código HEX (ej: #3498db)
-    id_usuario INT NOT NULL,
-    CONSTRAINT fk_asignatura_usuario FOREIGN KEY (id_usuario) 
-        REFERENCES USUARIO(id_usuario) ON DELETE CASCADE
-);
+--
+-- Dumping data for table `asignatura`
+--
 
--- 4. TABLA TAREA
-CREATE TABLE IF NOT EXISTS TAREA (
-    id_tarea INT PRIMARY KEY AUTO_INCREMENT,
-    titulo VARCHAR(255) NOT NULL,
-    descripcion TEXT,
-    fecha_entrega DATE,
-    prioridad TINYINT CHECK (prioridad BETWEEN 1 AND 3), -- 1: Alta, 2: Media, 3: Baja
-    completada BOOLEAN DEFAULT FALSE,
-    id_asignatura INT NOT NULL,
-    CONSTRAINT fk_tarea_asignatura FOREIGN KEY (id_asignatura) 
-        REFERENCES ASIGNATURA(id_asignatura) ON DELETE CASCADE
-);
+LOCK TABLES `asignatura` WRITE;
+/*!40000 ALTER TABLE `asignatura` DISABLE KEYS */;
+INSERT INTO `asignatura` VALUES (1,'Desarrollo de Apps','#3498db',1),(2,'Bases de Datos','#e74c3c',1),(3,'Matemáticas','#FF0000',1),(4,'Programación','#00FF00',1);
+/*!40000 ALTER TABLE `asignatura` ENABLE KEYS */;
+UNLOCK TABLES;
 
--- 5. TABLA SESION_ESTUDIO
-CREATE TABLE IF NOT EXISTS SESION_ESTUDIO (
-    id_sesion INT PRIMARY KEY AUTO_INCREMENT,
-    fecha_inicio DATETIME NOT NULL,
-    duracion_minutos INT NOT NULL,
-    tipo VARCHAR(50) DEFAULT 'Pomodoro',
-    id_usuario INT NOT NULL,
-    CONSTRAINT fk_sesion_usuario FOREIGN KEY (id_usuario) 
-        REFERENCES USUARIO(id_usuario) ON DELETE CASCADE
-);
+--
+-- Table structure for table `flashcard`
+--
 
--- 6. TABLA MAZO_FLASHCARD
-CREATE TABLE IF NOT EXISTS MAZO_FLASHCARD (
-    id_mazo INT PRIMARY KEY AUTO_INCREMENT,
-    nombre VARCHAR(100) NOT NULL,
-    descripcion TEXT,
-    id_usuario INT NOT NULL,
-    CONSTRAINT fk_mazo_usuario FOREIGN KEY (id_usuario) 
-        REFERENCES USUARIO(id_usuario) ON DELETE CASCADE
-);
+DROP TABLE IF EXISTS `flashcard`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `flashcard` (
+  `id_flashcard` int NOT NULL AUTO_INCREMENT,
+  `anverso` text NOT NULL,
+  `reverso` text NOT NULL,
+  `nivel_espaciado` int DEFAULT '0',
+  `proximo_repaso` date DEFAULT (curdate()),
+  `id_mazo` int NOT NULL,
+  PRIMARY KEY (`id_flashcard`),
+  KEY `idx_flashcard_mazo` (`id_mazo`),
+  CONSTRAINT `fk_flashcard_mazo` FOREIGN KEY (`id_mazo`) REFERENCES `mazo_flashcard` (`id_mazo`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- 7. TABLA FLASHCARD (Implementación del SRS)
-CREATE TABLE IF NOT EXISTS FLASHCARD (
-    id_flashcard INT PRIMARY KEY AUTO_INCREMENT,
-    anverso TEXT NOT NULL,
-    reverso TEXT NOT NULL,
-    nivel_espaciado INT DEFAULT 0,
-    proximo_repaso DATE DEFAULT (CURRENT_DATE),
-    id_mazo INT NOT NULL,
-    CONSTRAINT fk_flashcard_mazo FOREIGN KEY (id_mazo) 
-        REFERENCES MAZO_FLASHCARD(id_mazo) ON DELETE CASCADE
-);
+--
+-- Dumping data for table `flashcard`
+--
 
--- #############################################
--- EXTRAS: ÍNDICES Y DATOS DE PRUEBA
--- #############################################
+LOCK TABLES `flashcard` WRITE;
+/*!40000 ALTER TABLE `flashcard` DISABLE KEYS */;
+INSERT INTO `flashcard` VALUES (1,'¿Qué es la Encapsulación?','Ocultar los detalles internos de un objeto.',0,'2026-04-13',1),(2,'¿Qué significa JPA?','Java Persistence API.',0,'2026-04-13',1);
+/*!40000 ALTER TABLE `flashcard` ENABLE KEYS */;
+UNLOCK TABLES;
 
--- Índices para mejorar la velocidad de las consultas
-CREATE INDEX idx_tarea_asignatura ON TAREA(id_asignatura);
-CREATE INDEX idx_flashcard_mazo ON FLASHCARD(id_mazo);
-CREATE INDEX idx_sesion_usuario ON SESION_ESTUDIO(id_usuario);
+--
+-- Table structure for table `mazo_flashcard`
+--
 
--- Inserción de un usuario de prueba (contraseña ejemplo)
-INSERT INTO USUARIO (correo, contrasena_hash, modo_sin_cuenta) 
-VALUES ('estudiante@studysync.com', 'hash_ejemplo_1234', false);
+DROP TABLE IF EXISTS `mazo_flashcard`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `mazo_flashcard` (
+  `id_mazo` int NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(100) NOT NULL,
+  `descripcion` text,
+  `id_usuario` int NOT NULL,
+  PRIMARY KEY (`id_mazo`),
+  KEY `fk_mazo_usuario` (`id_usuario`),
+  CONSTRAINT `fk_mazo_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- Inserción de asignaturas para el usuario 1
-INSERT INTO ASIGNATURA (nombre, color, id_usuario) VALUES 
-('Desarrollo de Apps', '#3498db', 1),
-('Bases de Datos', '#e74c3c', 1);
+--
+-- Dumping data for table `mazo_flashcard`
+--
 
--- Inserción de tareas de ejemplo
-INSERT INTO TAREA (titulo, descripcion, fecha_entrega, prioridad, id_asignatura) VALUES 
-('Finalizar Backend', 'Implementar controladores en Spring Boot', '2026-06-01', 1, 1),
-('Repasar SQL', 'Estudiar triggers e índices', '2026-05-20', 2, 2);
+LOCK TABLES `mazo_flashcard` WRITE;
+/*!40000 ALTER TABLE `mazo_flashcard` DISABLE KEYS */;
+INSERT INTO `mazo_flashcard` VALUES (1,'Java Básico','Conceptos fundamentales de POO',1);
+/*!40000 ALTER TABLE `mazo_flashcard` ENABLE KEYS */;
+UNLOCK TABLES;
 
--- Inserción de un mazo y flashcards de ejemplo
-INSERT INTO MAZO_FLASHCARD (nombre, descripcion, id_usuario) 
-VALUES ('Java Básico', 'Conceptos fundamentales de POO', 1);
+--
+-- Table structure for table `sesion_estudio`
+--
 
-INSERT INTO FLASHCARD (anverso, reverso, id_mazo) VALUES 
-('¿Qué es la Encapsulación?', 'Ocultar los detalles internos de un objeto.', 1),
-('¿Qué significa JPA?', 'Java Persistence API.', 1);
+DROP TABLE IF EXISTS `sesion_estudio`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sesion_estudio` (
+  `id_sesion` int NOT NULL AUTO_INCREMENT,
+  `fecha_inicio` datetime NOT NULL,
+  `duracion_minutos` int NOT NULL,
+  `tipo` varchar(50) DEFAULT 'Pomodoro',
+  `id_usuario` int NOT NULL,
+  PRIMARY KEY (`id_sesion`),
+  KEY `idx_sesion_usuario` (`id_usuario`),
+  CONSTRAINT `fk_sesion_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `sesion_estudio`
+--
+
+LOCK TABLES `sesion_estudio` WRITE;
+/*!40000 ALTER TABLE `sesion_estudio` DISABLE KEYS */;
+/*!40000 ALTER TABLE `sesion_estudio` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tarea`
+--
+
+DROP TABLE IF EXISTS `tarea`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `tarea` (
+  `id_tarea` bigint NOT NULL AUTO_INCREMENT,
+  `titulo` varchar(255) NOT NULL,
+  `descripcion` varchar(255) DEFAULT NULL,
+  `fecha_entrega` date DEFAULT NULL,
+  `prioridad` int DEFAULT NULL,
+  `completada` int DEFAULT NULL,
+  `id_asignatura` int NOT NULL,
+  `estado` varchar(255) DEFAULT NULL,
+  `fecha_limite` date DEFAULT NULL,
+  PRIMARY KEY (`id_tarea`),
+  KEY `idx_tarea_asignatura` (`id_asignatura`),
+  CONSTRAINT `fk_tarea_asignatura` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`) ON DELETE CASCADE,
+  CONSTRAINT `tarea_chk_1` CHECK ((`prioridad` between 1 and 3))
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tarea`
+--
+
+LOCK TABLES `tarea` WRITE;
+/*!40000 ALTER TABLE `tarea` DISABLE KEYS */;
+INSERT INTO `tarea` VALUES (1,'Finalizar Backend','Implementar controladores en Spring Boot','2026-06-01',1,0,1,NULL,NULL),(2,'Repasar SQL','Estudiar triggers e índices','2026-05-20',2,0,2,NULL,NULL);
+/*!40000 ALTER TABLE `tarea` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `usuario`
+--
+
+DROP TABLE IF EXISTS `usuario`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `usuario` (
+  `id_usuario` int NOT NULL AUTO_INCREMENT,
+  `modo_sin_cuenta` int DEFAULT NULL,
+  `fecha_creacion` datetime DEFAULT CURRENT_TIMESTAMP,
+  `email` varchar(255) NOT NULL,
+  `nombre` varchar(255) DEFAULT NULL,
+  `password` varchar(255) NOT NULL,
+  `username` varchar(255) NOT NULL,
+  PRIMARY KEY (`id_usuario`),
+  UNIQUE KEY `UK5171l57faosmj8myawaucatdw` (`email`),
+  UNIQUE KEY `UK863n1y3x0jalatoir4325ehal` (`username`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `usuario`
+--
+
+LOCK TABLES `usuario` WRITE;
+/*!40000 ALTER TABLE `usuario` DISABLE KEYS */;
+INSERT INTO `usuario` VALUES (1,0,'2026-04-13 10:23:05','tuemail@ejemplo.com','Alberto','123','Aorellana');
+/*!40000 ALTER TABLE `usuario` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-04-13 13:21:35
