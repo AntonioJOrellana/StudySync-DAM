@@ -23,10 +23,10 @@ public class Asignatura {
     private String color; 
 
     @ManyToOne
-    @JoinColumn(name = "id_usuario", nullable = false)
-    @JsonIgnore
+    @JoinColumn(name = "id_usuario", nullable = false) // 'nullable = false' obliga a que el usuario exista
     private Usuario usuario;
 
-    @OneToMany(mappedBy = "asignatura")
+    @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Tarea> tareas;
 }

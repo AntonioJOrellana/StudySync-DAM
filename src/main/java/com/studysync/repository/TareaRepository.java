@@ -1,11 +1,10 @@
 package com.studysync.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
 import com.studysync.model.Tarea;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
 
-@Repository
-public interface TareaRepository extends JpaRepository<Tarea, Long> {
-    // Aquí ya tienes todos los métodos para gestionar tareas
+public interface TareaRepository extends JpaRepository<Tarea, Integer> {
+    // Este método será vital: buscar tareas por el ID del usuario
+    List<Tarea> findByUsuarioId(Integer usuarioId);
 }

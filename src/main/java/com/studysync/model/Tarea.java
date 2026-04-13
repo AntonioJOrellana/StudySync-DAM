@@ -32,8 +32,12 @@ public class Tarea {
 
 
     @ManyToOne
-    @JoinColumn(name = "id_asignatura")
-    @JsonIgnore
+    @JoinColumn(name = "id_usuario", nullable = false)
+    private Usuario usuario;
+
+    @ManyToOne
+    @JoinColumn(name = "id_asignatura", nullable = false)
+    // QUITAMOS EL @JsonIgnore de aquí para que deje entrar datos
     private Asignatura asignatura;
 }
 

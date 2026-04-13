@@ -6,6 +6,6 @@ import com.studysync.model.Usuario;
 
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
-    // Aquí no hace falta escribir nada más por ahora. 
-    // JpaRepository ya nos da los métodos para Guardar, Editar y Borrar.
+
+    Usuario findByEmail(String email);
 }
