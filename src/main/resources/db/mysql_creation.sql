@@ -16,6 +16,34 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `agenda`
+--
+
+DROP TABLE IF EXISTS `agenda`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `agenda` (
+  `id_evento` int NOT NULL AUTO_INCREMENT,
+  `id_asignatura` int NOT NULL,
+  `titulo` varchar(150) NOT NULL,
+  `fecha_evento` datetime NOT NULL,
+  `prioridad` enum('alta','media','baja') DEFAULT 'media',
+  PRIMARY KEY (`id_evento`),
+  KEY `id_asignatura` (`id_asignatura`),
+  CONSTRAINT `agenda_ibfk_1` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `agenda`
+--
+
+LOCK TABLES `agenda` WRITE;
+/*!40000 ALTER TABLE `agenda` DISABLE KEYS */;
+/*!40000 ALTER TABLE `agenda` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `asignatura`
 --
 
@@ -27,10 +55,12 @@ CREATE TABLE `asignatura` (
   `nombre` varchar(100) NOT NULL,
   `color` varchar(7) DEFAULT NULL,
   `id_usuario` int NOT NULL,
+  `profesor` varchar(150) DEFAULT NULL,
+  `descripcion` text,
   PRIMARY KEY (`id_asignatura`),
   KEY `fk_asignatura_usuario` (`id_usuario`),
   CONSTRAINT `fk_asignatura_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -39,7 +69,6 @@ CREATE TABLE `asignatura` (
 
 LOCK TABLES `asignatura` WRITE;
 /*!40000 ALTER TABLE `asignatura` DISABLE KEYS */;
-INSERT INTO `asignatura` VALUES (1,'Desarrollo de Apps','#3498db',1),(2,'Bases de Datos','#e74c3c',1),(3,'Matemáticas','#FF0000',1),(4,'Programación','#00FF00',1);
 /*!40000 ALTER TABLE `asignatura` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -57,6 +86,7 @@ CREATE TABLE `flashcard` (
   `nivel_espaciado` int DEFAULT '0',
   `proximo_repaso` date DEFAULT (curdate()),
   `id_mazo` int NOT NULL,
+  `fecha_creacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_flashcard`),
   KEY `idx_flashcard_mazo` (`id_mazo`),
   CONSTRAINT `fk_flashcard_mazo` FOREIGN KEY (`id_mazo`) REFERENCES `mazo_flashcard` (`id_mazo`) ON DELETE CASCADE
@@ -69,7 +99,6 @@ CREATE TABLE `flashcard` (
 
 LOCK TABLES `flashcard` WRITE;
 /*!40000 ALTER TABLE `flashcard` DISABLE KEYS */;
-INSERT INTO `flashcard` VALUES (1,'¿Qué es la Encapsulación?','Ocultar los detalles internos de un objeto.',0,'2026-04-13',1),(2,'¿Qué significa JPA?','Java Persistence API.',0,'2026-04-13',1);
 /*!40000 ALTER TABLE `flashcard` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -85,8 +114,11 @@ CREATE TABLE `mazo_flashcard` (
   `nombre` varchar(100) NOT NULL,
   `descripcion` text,
   `id_usuario` int NOT NULL,
+  `id_asignatura` int NOT NULL,
   PRIMARY KEY (`id_mazo`),
   KEY `fk_mazo_usuario` (`id_usuario`),
+  KEY `fk_mazo_asignatura` (`id_asignatura`),
+  CONSTRAINT `fk_mazo_asignatura` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`) ON DELETE CASCADE,
   CONSTRAINT `fk_mazo_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -97,8 +129,36 @@ CREATE TABLE `mazo_flashcard` (
 
 LOCK TABLES `mazo_flashcard` WRITE;
 /*!40000 ALTER TABLE `mazo_flashcard` DISABLE KEYS */;
-INSERT INTO `mazo_flashcard` VALUES (1,'Java Básico','Conceptos fundamentales de POO',1);
 /*!40000 ALTER TABLE `mazo_flashcard` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `recurso`
+--
+
+DROP TABLE IF EXISTS `recurso`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `recurso` (
+  `id_recurso` int NOT NULL AUTO_INCREMENT,
+  `id_asignatura` int NOT NULL,
+  `nombre` varchar(255) NOT NULL,
+  `tipo` enum('pdf','video','enlace') DEFAULT 'pdf',
+  `url_acceso` text NOT NULL,
+  `metadata` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`id_recurso`),
+  KEY `id_asignatura` (`id_asignatura`),
+  CONSTRAINT `recurso_ibfk_1` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `recurso`
+--
+
+LOCK TABLES `recurso` WRITE;
+/*!40000 ALTER TABLE `recurso` DISABLE KEYS */;
+/*!40000 ALTER TABLE `recurso` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -114,8 +174,11 @@ CREATE TABLE `sesion_estudio` (
   `duracion_minutos` int NOT NULL,
   `tipo` varchar(50) DEFAULT 'Pomodoro',
   `id_usuario` int NOT NULL,
+  `id_asignatura` int NOT NULL,
   PRIMARY KEY (`id_sesion`),
   KEY `idx_sesion_usuario` (`id_usuario`),
+  KEY `fk_sesion_asignatura` (`id_asignatura`),
+  CONSTRAINT `fk_sesion_asignatura` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`) ON DELETE CASCADE,
   CONSTRAINT `fk_sesion_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -146,11 +209,14 @@ CREATE TABLE `tarea` (
   `id_asignatura` int NOT NULL,
   `estado` varchar(255) DEFAULT NULL,
   `fecha_limite` date DEFAULT NULL,
+  `id_usuario` int NOT NULL,
   PRIMARY KEY (`id_tarea`),
   KEY `idx_tarea_asignatura` (`id_asignatura`),
+  KEY `FKet29cbgn3dx42xd4h2647ajx6` (`id_usuario`),
   CONSTRAINT `fk_tarea_asignatura` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`) ON DELETE CASCADE,
+  CONSTRAINT `FKet29cbgn3dx42xd4h2647ajx6` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`),
   CONSTRAINT `tarea_chk_1` CHECK ((`prioridad` between 1 and 3))
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -159,7 +225,6 @@ CREATE TABLE `tarea` (
 
 LOCK TABLES `tarea` WRITE;
 /*!40000 ALTER TABLE `tarea` DISABLE KEYS */;
-INSERT INTO `tarea` VALUES (1,'Finalizar Backend','Implementar controladores en Spring Boot','2026-06-01',1,0,1,NULL,NULL),(2,'Repasar SQL','Estudiar triggers e índices','2026-05-20',2,0,2,NULL,NULL);
 /*!40000 ALTER TABLE `tarea` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -175,13 +240,12 @@ CREATE TABLE `usuario` (
   `modo_sin_cuenta` int DEFAULT NULL,
   `fecha_creacion` datetime DEFAULT CURRENT_TIMESTAMP,
   `email` varchar(255) NOT NULL,
-  `nombre` varchar(255) DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `username` varchar(255) NOT NULL,
   PRIMARY KEY (`id_usuario`),
   UNIQUE KEY `UK5171l57faosmj8myawaucatdw` (`email`),
   UNIQUE KEY `UK863n1y3x0jalatoir4325ehal` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -190,7 +254,7 @@ CREATE TABLE `usuario` (
 
 LOCK TABLES `usuario` WRITE;
 /*!40000 ALTER TABLE `usuario` DISABLE KEYS */;
-INSERT INTO `usuario` VALUES (1,0,'2026-04-13 10:23:05','tuemail@ejemplo.com','Alberto','123','Aorellana');
+INSERT INTO `usuario` VALUES (1,NULL,'2026-04-14 10:27:20','alberto@mail.com','$2a$10$8.UnS3Rpx9L.Agv.L1S9teQWnB2.pWqN6Gf.HhJ.vYvH5H6H5H6H5','Aorellana'),(2,NULL,'2026-04-14 10:27:20','pepe@mail.com','$2a$10$8.UnS3Rpx9L.Agv.L1S9teQWnB2.pWqN6Gf.HhJ.vYvH5H6H5H6H5','Pepe'),(3,NULL,'2026-04-14 10:17:36','ana@mail.com','$2a$10$FUKAJytRAzQ6NtG1aeT6lOl8ByrJxkQeQpAEb5PN8cPwwdl27c4OO','Ana');
 /*!40000 ALTER TABLE `usuario` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -203,4 +267,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-13 13:21:35
+-- Dump completed on 2026-04-14 12:06:49

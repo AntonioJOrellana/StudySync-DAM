@@ -7,4 +7,5 @@ import java.util.List;
 public interface TareaRepository extends JpaRepository<Tarea, Integer> {
     // Este método será vital: buscar tareas por el ID del usuario
     List<Tarea> findByUsuarioId(Integer usuarioId);
+
 }

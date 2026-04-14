@@ -3,6 +3,8 @@ package com.studysync.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,20 +17,14 @@ import org.springframework.web.bind.annotation.RestController;
 import com.studysync.model.Tarea;
 import com.studysync.repository.TareaRepository;
 
-import jakarta.transaction.Transactional;
 
+@CrossOrigin(origins = "http://localhost:3000") // El puerto por defecto de React
 @RestController
 @RequestMapping("/tareas")
 public class TareaController {
 
     @Autowired
     private TareaRepository tareaRepository;
-
-    // Obtener todas las tareas de un usuario específico
-    @GetMapping("/usuario/{usuarioId}")
-    public List<Tarea> obtenerPorUsuario(@PathVariable Integer usuarioId) {
-        return tareaRepository.findByUsuarioId(usuarioId);
-    }
 
     // Crear una nueva tarea
     @PostMapping
@@ -37,44 +33,47 @@ public class TareaController {
     }
 
     // 1. EDITAR una tarea
-    @PutMapping("/{id}")
-public Tarea actualizarTarea(@PathVariable Integer id, @RequestBody Tarea datosNuevos) {
-    return tareaRepository.findById(id).map(tarea -> {
+    // EDITAR TAREA
+@PutMapping("/{id}")
+public ResponseEntity<Tarea> editarTarea(@PathVariable Integer id, @RequestBody Tarea detallesNuevos) {
+    return tareaRepository.findById(id).map(tareaExistente -> {
+        // Actualizamos campos de texto y valores
+        tareaExistente.setTitulo(detallesNuevos.getTitulo());
+        tareaExistente.setDescripcion(detallesNuevos.getDescripcion());
+        tareaExistente.setFechaEntrega(detallesNuevos.getFechaEntrega());
+        tareaExistente.setPrioridad(detallesNuevos.getPrioridad());
+        tareaExistente.setCompletada(detallesNuevos.getCompletada());
+        tareaExistente.setEstado(detallesNuevos.getEstado());
 
-
-
-        // 1. Actualizamos los campos básicos
-        tarea.setTitulo(datosNuevos.getTitulo());
-        tarea.setDescripcion(datosNuevos.getDescripcion());
-        tarea.setFechaEntrega(datosNuevos.getFechaEntrega());
-        tarea.setPrioridad(datosNuevos.getPrioridad());
-        tarea.setCompletada(datosNuevos.getCompletada());
-        tarea.setEstado(datosNuevos.getEstado());
-
-        // 2. IMPORTANTE: No toques 'usuario' ni 'asignatura' si no es necesario.
-        // Si el JSON los trae, asegúrate de que no vengan vacíos.
-        if (datosNuevos.getUsuario() != null) {
-            tarea.setUsuario(datosNuevos.getUsuario());
+        // IMPORTANTE: Si el JSON no trae usuario, mantenemos el que ya tenía
+        if (detallesNuevos.getUsuario() != null) {
+            tareaExistente.setUsuario(detallesNuevos.getUsuario());
         }
-        if (datosNuevos.getAsignatura() != null) {
-            tarea.setAsignatura(datosNuevos.getAsignatura());
+        // Si el JSON no trae asignatura, mantenemos la que ya tenía
+        if (detallesNuevos.getAsignatura() != null) {
+            tareaExistente.setAsignatura(detallesNuevos.getAsignatura());
         }
 
-        return tareaRepository.save(tarea);
-    }).orElseThrow(() -> new RuntimeException("No he encontrado la tarea con ID: " + id));
+        Tarea actualizada = tareaRepository.save(tareaExistente);
+        return ResponseEntity.ok(actualizada);
+    }).orElse(ResponseEntity.notFound().build());
 }
-
+    // 2. BORRAR una tarea
     @DeleteMapping("/{id}")
-    @Transactional // <--- Esto asegura que el borrado se ejecute en la DB
-    public String borrarTarea(@PathVariable Integer id) {
+        public ResponseEntity<Void> eliminarTarea(@PathVariable Integer id) {
     if (tareaRepository.existsById(id)) {
         tareaRepository.deleteById(id);
-        // Forzamos un flush para que se envíe a la DB ahora mismo
-        tareaRepository.flush(); 
-        return "Tarea eliminada correctamente";
-    } else {
-        return "La tarea con ID " + id + " no existe en la base de datos";
+        return ResponseEntity.noContent().build();
     }
+    return ResponseEntity.notFound().build();
+}
+
+    
+
+    // 5. OBTENER tareas por usuario
+    @GetMapping("/usuario/{id}")
+    public List<Tarea> listarPorUsuario(@PathVariable Integer id) {
+    return tareaRepository.findByUsuarioId(id);
 }
 
 

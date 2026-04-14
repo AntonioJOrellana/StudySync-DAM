@@ -1,5 +1,7 @@
 package com.studysync.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -16,13 +18,12 @@ public class Usuario {
     @Column(nullable = false, unique = true)
     private String username;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(nullable = false)
     private String password;
 
     @Column(nullable = false, unique = true)
     private String email;
-
-    private String nombre;
 
     @Column(name = "modo_sin_cuenta")
     private Integer modoSinCuenta;
