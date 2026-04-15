@@ -30,7 +30,7 @@ public class AsignaturaController {
 
     // 3. EDITAR una asignatura
     @PutMapping("/{id}")
-public ResponseEntity<Asignatura> editarAsignatura(@PathVariable Integer id, @RequestBody Asignatura detallesNuevos) {
+public ResponseEntity<Asignatura> editarAsignatura(@PathVariable Long id, @RequestBody Asignatura detallesNuevos) {
     return asignaturaRepository.findById(id).map(asignaturaExistente -> {
         // 1. Actualizamos el nombre
         asignaturaExistente.setNombre(detallesNuevos.getNombre());
@@ -45,7 +45,7 @@ public ResponseEntity<Asignatura> editarAsignatura(@PathVariable Integer id, @Re
 
     // 4. BORRAR una asignatura
     @DeleteMapping("/{id}")
-public ResponseEntity<Void> eliminarAsignatura(@PathVariable Integer id) {
+public ResponseEntity<Void> eliminarAsignatura(@PathVariable Long id) {
     if (asignaturaRepository.existsById(id)) {
         asignaturaRepository.deleteById(id);
         return ResponseEntity.noContent().build(); // Devuelve 204 (Éxito, sin contenido)
@@ -56,7 +56,7 @@ public ResponseEntity<Void> eliminarAsignatura(@PathVariable Integer id) {
 
     // 5. OBTENER asignaturas por usuario
     @GetMapping("/usuario/{id}")
-    public List<Asignatura> listarPorUsuario(@PathVariable Integer id) {
+    public List<Asignatura> listarPorUsuario(@PathVariable Long id) {
     return asignaturaRepository.findByUsuarioId(id);
 }
 }

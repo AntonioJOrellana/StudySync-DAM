@@ -1,5 +1,6 @@
 package com.studysync.controller;
 
+import com.google.common.base.Optional;
 import com.studysync.model.Usuario;
 import com.studysync.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,17 +55,21 @@ public class UsuarioController {
 }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Usuario loginReq) { 
-    Usuario user = usuarioRepository.findByEmail(loginReq.getEmail());
-    
-    if (user != null && passwordEncoder.matches(loginReq.getPassword(), user.getPassword())) {
-        return ResponseEntity.ok(user);
+    public ResponseEntity<?> login(@RequestBody Usuario loginReq) {
+    // 1. Buscamos al usuario (devuelve una caja 'Optional')
+    Optional<Usuario> userOpt = usuarioRepository.findByEmail(loginReq.getEmail());
+
+    // 2. Verificamos si la caja está llena y si la contraseña coincide
+    // Usamos userOpt.get() para sacar al Usuario de la caja
+    if (userOpt.isPresent() && passwordEncoder.matches(loginReq.getPassword(), userOpt.get().getPassword())) {
+        return ResponseEntity.ok(userOpt.get());
     }
+
     return ResponseEntity.status(401).body("Credenciales incorrectas");
 }
 
     @PatchMapping("/{id}/password")
-    public ResponseEntity<?> cambiarPassword(@PathVariable Integer id, @RequestBody String nuevaPassword) {
+    public ResponseEntity<?> cambiarPassword(@PathVariable Long id, @RequestBody String nuevaPassword) {
     return usuarioRepository.findById(id).map(usuario -> {
         // CIFRAMOS la nueva contraseña
         usuario.setPassword(passwordEncoder.encode(nuevaPassword));

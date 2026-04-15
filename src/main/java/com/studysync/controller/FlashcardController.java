@@ -1,25 +1,28 @@
 package com.studysync.controller;
 
 import com.studysync.model.Flashcard;
-import com.studysync.repository.FlashcardRepository;
+import com.studysync.service.FlashcardService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @CrossOrigin(origins = "http://localhost:3000") // El puerto por defecto de React
 @RestController
-@RequestMapping("/flashcards")
+@RequestMapping("/api/flashcards")
 public class FlashcardController {
 
     @Autowired
-    private FlashcardRepository flashcardRepository;
+    private FlashcardService flashcardService;
 
     @GetMapping
-    public List<Flashcard> obtenerTodas() {
-        return flashcardRepository.findAll();
+    public List<Flashcard> listar() {
+        return flashcardService.listarTodas();
+    }
+
+    // Ruta mágica: http://localhost:8080/api/flashcards/ia?pregunta=Que es la fotosintesis
+    @PostMapping("/ia")
+    public Flashcard crearConIA(@RequestParam String pregunta) {
+        return flashcardService.generarConIA(pregunta);
     }
 }

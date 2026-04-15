@@ -12,18 +12,26 @@ public class SesionEstudio {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_sesion")
-    private Integer id;
+    private long id;
 
     @Column(name = "fecha_inicio")
     private LocalDateTime fechaInicio;
 
     @Column(name = "duracion_minutos")
-    private Integer duracionMinutos;
-
-    @Column(length = 50)
-    private String tipo; // Ejemplo: 'Pomodoro', 'Libre', etc.
+    private Integer duracion;
 
     @ManyToOne
     @JoinColumn(name = "id_usuario", nullable = false)
     private Usuario usuario;
+
+    @ManyToOne
+    @JoinColumn(name = "id_asignatura", nullable = false)
+    private Asignatura asignatura; 
+
+    @Enumerated(EnumType.STRING)
+    private TipoSesion tipo = TipoSesion.estudio; // 'estudio', 'repaso_flashcards', 'examen_simulado'
+
+    public enum TipoSesion {
+        estudio, repaso_flashcards, examen_simulado
+    }
 }

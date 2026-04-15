@@ -13,7 +13,7 @@ public class Usuario {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_usuario")
-    private Integer id;
+    private long id;
 
     @Column(nullable = false, unique = true)
     private String username;
@@ -27,4 +27,13 @@ public class Usuario {
 
     @Column(name = "modo_sin_cuenta")
     private Integer modoSinCuenta;
+
+    // Añadir a Usuario.java
+    @Column(name = "url_avatar")
+    private String urlAvatar; // Para la foto de perfil
+
+    @Column(name = "puntos_experiencia")
+    private Integer puntosExperiencia = 0; // Para el sistema de niveles/logros
+
+
 }

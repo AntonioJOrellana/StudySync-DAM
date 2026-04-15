@@ -8,6 +8,6 @@ import org.springframework.stereotype.Repository;
 import com.studysync.model.Asignatura;
 
 @Repository
-public interface AsignaturaRepository extends JpaRepository<Asignatura, Integer> {
-    List<Asignatura> findByUsuarioId(Integer usuarioId);
+public interface AsignaturaRepository extends JpaRepository<Asignatura, Long> {
+    List<Asignatura> findByUsuarioId(Long usuarioId);
 }
