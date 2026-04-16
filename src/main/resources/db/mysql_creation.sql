@@ -23,14 +23,17 @@ DROP TABLE IF EXISTS `agenda`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `agenda` (
-  `id_evento` int NOT NULL AUTO_INCREMENT,
-  `id_asignatura` int NOT NULL,
+  `fecha_evento` datetime(6) NOT NULL,
+  `id_asignatura` bigint NOT NULL,
+  `id_evento` bigint NOT NULL AUTO_INCREMENT,
+  `id_usuario` bigint NOT NULL,
   `titulo` varchar(150) NOT NULL,
-  `fecha_evento` datetime NOT NULL,
-  `prioridad` enum('alta','media','baja') DEFAULT 'media',
+  `prioridad` enum('alta','media','baja') DEFAULT NULL,
   PRIMARY KEY (`id_evento`),
-  KEY `id_asignatura` (`id_asignatura`),
-  CONSTRAINT `agenda_ibfk_1` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`) ON DELETE CASCADE
+  KEY `FKqpehv51yfhi24fbm12fxgr8b7` (`id_asignatura`),
+  KEY `FK8sw8dmc46jl6evg8lsg5p8tue` (`id_usuario`),
+  CONSTRAINT `FK8sw8dmc46jl6evg8lsg5p8tue` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`),
+  CONSTRAINT `FKqpehv51yfhi24fbm12fxgr8b7` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -51,16 +54,16 @@ DROP TABLE IF EXISTS `asignatura`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `asignatura` (
-  `id_asignatura` int NOT NULL AUTO_INCREMENT,
-  `nombre` varchar(100) NOT NULL,
   `color` varchar(7) DEFAULT NULL,
-  `id_usuario` int NOT NULL,
+  `id_asignatura` bigint NOT NULL AUTO_INCREMENT,
+  `id_usuario` bigint NOT NULL,
+  `nombre` varchar(100) NOT NULL,
   `profesor` varchar(150) DEFAULT NULL,
   `descripcion` text,
   PRIMARY KEY (`id_asignatura`),
-  KEY `fk_asignatura_usuario` (`id_usuario`),
-  CONSTRAINT `fk_asignatura_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `FK3ny9exio8cdbic7mfpmfhii2e` (`id_usuario`),
+  CONSTRAINT `FK3ny9exio8cdbic7mfpmfhii2e` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -80,17 +83,18 @@ DROP TABLE IF EXISTS `flashcard`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `flashcard` (
-  `id_flashcard` int NOT NULL AUTO_INCREMENT,
+  `creada_por_ia` bit(1) DEFAULT NULL,
+  `nivel_espaciado` int DEFAULT NULL,
+  `fecha_creacion` datetime(6) DEFAULT NULL,
+  `id_flashcard` bigint NOT NULL AUTO_INCREMENT,
+  `id_mazo` bigint NOT NULL,
+  `proximo_repaso` datetime(6) DEFAULT NULL,
   `anverso` text NOT NULL,
   `reverso` text NOT NULL,
-  `nivel_espaciado` int DEFAULT '0',
-  `proximo_repaso` date DEFAULT (curdate()),
-  `id_mazo` int NOT NULL,
-  `fecha_creacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_flashcard`),
-  KEY `idx_flashcard_mazo` (`id_mazo`),
-  CONSTRAINT `fk_flashcard_mazo` FOREIGN KEY (`id_mazo`) REFERENCES `mazo_flashcard` (`id_mazo`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `FKiw2euet03arkft98hoxghsng4` (`id_mazo`),
+  CONSTRAINT `FKiw2euet03arkft98hoxghsng4` FOREIGN KEY (`id_mazo`) REFERENCES `mazo_flashcard` (`id_mazo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -110,17 +114,17 @@ DROP TABLE IF EXISTS `mazo_flashcard`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `mazo_flashcard` (
-  `id_mazo` int NOT NULL AUTO_INCREMENT,
+  `id_asignatura` bigint NOT NULL,
+  `id_mazo` bigint NOT NULL AUTO_INCREMENT,
+  `id_usuario` bigint NOT NULL,
   `nombre` varchar(100) NOT NULL,
   `descripcion` text,
-  `id_usuario` int NOT NULL,
-  `id_asignatura` int NOT NULL,
   PRIMARY KEY (`id_mazo`),
-  KEY `fk_mazo_usuario` (`id_usuario`),
-  KEY `fk_mazo_asignatura` (`id_asignatura`),
-  CONSTRAINT `fk_mazo_asignatura` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`) ON DELETE CASCADE,
-  CONSTRAINT `fk_mazo_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `FKgav7sks5d8ck8cmsaqbe5j5l7` (`id_asignatura`),
+  KEY `FKl9n1p440jp3h5to4pih0hu0vw` (`id_usuario`),
+  CONSTRAINT `FKgav7sks5d8ck8cmsaqbe5j5l7` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`),
+  CONSTRAINT `FKl9n1p440jp3h5to4pih0hu0vw` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -140,15 +144,16 @@ DROP TABLE IF EXISTS `recurso`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `recurso` (
-  `id_recurso` int NOT NULL AUTO_INCREMENT,
-  `id_asignatura` int NOT NULL,
-  `nombre` varchar(255) NOT NULL,
-  `tipo` enum('pdf','video','enlace') DEFAULT 'pdf',
-  `url_acceso` text NOT NULL,
+  `fecha_subida` datetime(6) DEFAULT NULL,
+  `id_asignatura` bigint NOT NULL,
+  `id_recurso` bigint NOT NULL AUTO_INCREMENT,
   `metadata` varchar(50) DEFAULT NULL,
+  `nombre` varchar(255) NOT NULL,
+  `url_acceso` text NOT NULL,
+  `tipo` enum('pdf','video','enlace','otro') DEFAULT NULL,
   PRIMARY KEY (`id_recurso`),
-  KEY `id_asignatura` (`id_asignatura`),
-  CONSTRAINT `recurso_ibfk_1` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`) ON DELETE CASCADE
+  KEY `FKd84aid4bpfca7vogqixjlyq9b` (`id_asignatura`),
+  CONSTRAINT `FKd84aid4bpfca7vogqixjlyq9b` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -169,17 +174,17 @@ DROP TABLE IF EXISTS `sesion_estudio`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sesion_estudio` (
-  `id_sesion` int NOT NULL AUTO_INCREMENT,
-  `fecha_inicio` datetime NOT NULL,
-  `duracion_minutos` int NOT NULL,
-  `tipo` varchar(50) DEFAULT 'Pomodoro',
-  `id_usuario` int NOT NULL,
-  `id_asignatura` int NOT NULL,
+  `duracion_minutos` int DEFAULT NULL,
+  `fecha_inicio` datetime(6) DEFAULT NULL,
+  `id_asignatura` bigint NOT NULL,
+  `id_sesion` bigint NOT NULL AUTO_INCREMENT,
+  `id_usuario` bigint NOT NULL,
+  `tipo` enum('estudio','examen_simulado','repaso_flashcards') DEFAULT NULL,
   PRIMARY KEY (`id_sesion`),
-  KEY `idx_sesion_usuario` (`id_usuario`),
-  KEY `fk_sesion_asignatura` (`id_asignatura`),
-  CONSTRAINT `fk_sesion_asignatura` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`) ON DELETE CASCADE,
-  CONSTRAINT `fk_sesion_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE
+  KEY `FK7d5v4wtsn79q12ysllca6a8r8` (`id_asignatura`),
+  KEY `FKodsfhhjdj5e6lrirm4wdl843` (`id_usuario`),
+  CONSTRAINT `FK7d5v4wtsn79q12ysllca6a8r8` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`),
+  CONSTRAINT `FKodsfhhjdj5e6lrirm4wdl843` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -200,23 +205,20 @@ DROP TABLE IF EXISTS `tarea`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `tarea` (
-  `id_tarea` bigint NOT NULL AUTO_INCREMENT,
-  `titulo` varchar(255) NOT NULL,
-  `descripcion` varchar(255) DEFAULT NULL,
+  `completada` bit(1) NOT NULL,
   `fecha_entrega` date DEFAULT NULL,
-  `prioridad` int DEFAULT NULL,
-  `completada` int DEFAULT NULL,
-  `id_asignatura` int NOT NULL,
-  `estado` varchar(255) DEFAULT NULL,
-  `fecha_limite` date DEFAULT NULL,
-  `id_usuario` int NOT NULL,
+  `id_asignatura` bigint NOT NULL,
+  `id_tarea` bigint NOT NULL AUTO_INCREMENT,
+  `id_usuario` bigint DEFAULT NULL,
+  `descripcion` varchar(255) DEFAULT NULL,
+  `titulo` varchar(255) DEFAULT NULL,
+  `prioridad` enum('alta','baja','media') DEFAULT NULL,
   PRIMARY KEY (`id_tarea`),
-  KEY `idx_tarea_asignatura` (`id_asignatura`),
+  KEY `FKl3haq47n5w5udb72k3k7vebkg` (`id_asignatura`),
   KEY `FKet29cbgn3dx42xd4h2647ajx6` (`id_usuario`),
-  CONSTRAINT `fk_tarea_asignatura` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`) ON DELETE CASCADE,
   CONSTRAINT `FKet29cbgn3dx42xd4h2647ajx6` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`),
-  CONSTRAINT `tarea_chk_1` CHECK ((`prioridad` between 1 and 3))
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CONSTRAINT `FKl3haq47n5w5udb72k3k7vebkg` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -236,16 +238,17 @@ DROP TABLE IF EXISTS `usuario`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `usuario` (
-  `id_usuario` int NOT NULL AUTO_INCREMENT,
   `modo_sin_cuenta` int DEFAULT NULL,
-  `fecha_creacion` datetime DEFAULT CURRENT_TIMESTAMP,
+  `puntos_experiencia` int DEFAULT NULL,
+  `id_usuario` bigint NOT NULL AUTO_INCREMENT,
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
+  `url_avatar` varchar(255) DEFAULT NULL,
   `username` varchar(255) NOT NULL,
   PRIMARY KEY (`id_usuario`),
   UNIQUE KEY `UK5171l57faosmj8myawaucatdw` (`email`),
   UNIQUE KEY `UK863n1y3x0jalatoir4325ehal` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -254,7 +257,6 @@ CREATE TABLE `usuario` (
 
 LOCK TABLES `usuario` WRITE;
 /*!40000 ALTER TABLE `usuario` DISABLE KEYS */;
-INSERT INTO `usuario` VALUES (1,NULL,'2026-04-14 10:27:20','alberto@mail.com','$2a$10$8.UnS3Rpx9L.Agv.L1S9teQWnB2.pWqN6Gf.HhJ.vYvH5H6H5H6H5','Aorellana'),(2,NULL,'2026-04-14 10:27:20','pepe@mail.com','$2a$10$8.UnS3Rpx9L.Agv.L1S9teQWnB2.pWqN6Gf.HhJ.vYvH5H6H5H6H5','Pepe'),(3,NULL,'2026-04-14 10:17:36','ana@mail.com','$2a$10$FUKAJytRAzQ6NtG1aeT6lOl8ByrJxkQeQpAEb5PN8cPwwdl27c4OO','Ana');
 /*!40000 ALTER TABLE `usuario` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -267,4 +269,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-14 12:06:49
+-- Dump completed on 2026-04-16  9:45:44

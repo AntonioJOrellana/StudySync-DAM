@@ -3,11 +3,13 @@ package com.studysync.controller;
 import com.studysync.model.Flashcard;
 import com.studysync.service.FlashcardService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(origins = "http://localhost:3000") // El puerto por defecto de React
+@CrossOrigin(origins = "http://localhost:3000")
 @RestController
 @RequestMapping("/api/flashcards")
 public class FlashcardController {
@@ -15,14 +17,24 @@ public class FlashcardController {
     @Autowired
     private FlashcardService flashcardService;
 
+    // Obtener todas las flashcards
     @GetMapping
-    public List<Flashcard> listar() {
-        return flashcardService.listarTodas();
+    public ResponseEntity<List<Flashcard>> listar() {
+        List<Flashcard> flashcards = flashcardService.listarTodas();
+        return ResponseEntity.ok(flashcards);
     }
 
-    // Ruta mágica: http://localhost:8080/api/flashcards/ia?pregunta=Que es la fotosintesis
-    @PostMapping("/ia")
-    public Flashcard crearConIA(@RequestParam String pregunta) {
-        return flashcardService.generarConIA(pregunta);
+    // Generar con IA
+    // URL: POST http://localhost:8080/api/flashcards/ia?pregunta=¿Qué es un algoritmo?
+    @PostMapping("/ia/recurso/{recursoId}")
+    public ResponseEntity<Flashcard> generarDesdePdf(@PathVariable Long recursoId) {
+        Flashcard nueva = flashcardService.generarDesdeRecurso(recursoId);
+     return ResponseEntity.ok(nueva);
+    }
+    
+    // También es buena idea tener un POST normal para cuando el usuario las crea a mano
+    @PostMapping
+    public ResponseEntity<Flashcard> crearManual(@RequestBody Flashcard flashcard) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(flashcardService.guardar(flashcard));
     }
 }

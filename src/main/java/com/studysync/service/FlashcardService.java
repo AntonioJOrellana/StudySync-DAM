@@ -4,8 +4,9 @@ import com.studysync.model.Flashcard;
 import java.util.List;
 
 public interface FlashcardService {
-    Flashcard guardar(Flashcard flashcard);
     List<Flashcard> listarTodas();
-    // El método estrella: genera el reverso usando la IA
-    Flashcard generarConIA(String pregunta);
+    Flashcard guardar(Flashcard flashcard);
+    
+    // El nuevo método que usaremos para la IA y el PDF
+    Flashcard generarDesdeRecurso(Long recursoId);
 }

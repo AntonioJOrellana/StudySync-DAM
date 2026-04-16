@@ -28,6 +28,10 @@ public class Agenda {
     @JoinColumn(name = "id_asignatura", nullable = false)
     private Asignatura asignatura;
 
+    @ManyToOne
+    @JoinColumn(name = "id_usuario", nullable = false) // Esto crea la columna en la BD
+    private Usuario usuario; // <--- AÑADE ESTO
+
     public enum Prioridad {
         alta, media, baja
     }

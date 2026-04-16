@@ -9,5 +9,6 @@ import com.studysync.model.Asignatura;
 
 @Repository
 public interface AsignaturaRepository extends JpaRepository<Asignatura, Long> {
-    List<Asignatura> findByUsuarioId(Long usuarioId);
+    List<Asignatura> findByUsuario_Id(Long idUsuario);
+   
 }

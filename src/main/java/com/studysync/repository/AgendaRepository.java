@@ -7,6 +7,6 @@ import java.util.List;
 
 @Repository
 public interface AgendaRepository extends JpaRepository<Agenda, Long> {
-    // Este es el método que te marcaba error en el Service
-    List<Agenda> findByUsuarioId(Long usuarioId);
+    // Buscamos dentro del objeto 'usuario' su atributo 'id'
+    List<Agenda> findByUsuario_Id(Long id);
 }

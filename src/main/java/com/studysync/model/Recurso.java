@@ -38,4 +38,6 @@ public class Recurso {
     public enum TipoRecurso {
         pdf, video, enlace, otro
     }
+
+    public String getUrl() { return urlAcceso; }
 }
