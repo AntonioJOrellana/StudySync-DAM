@@ -8,5 +8,5 @@ public interface FlashcardService {
     Flashcard guardar(Flashcard flashcard);
     
     // El nuevo método que usaremos para la IA y el PDF
-    Flashcard generarDesdeRecurso(Long recursoId);
+    List<Flashcard> generarDesdeRecurso(Long recursoId);
 }

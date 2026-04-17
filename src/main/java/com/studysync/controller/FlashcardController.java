@@ -27,8 +27,8 @@ public class FlashcardController {
     // Generar con IA
     // URL: POST http://localhost:8080/api/flashcards/ia?pregunta=¿Qué es un algoritmo?
     @PostMapping("/ia/recurso/{recursoId}")
-    public ResponseEntity<Flashcard> generarDesdePdf(@PathVariable Long recursoId) {
-        Flashcard nueva = flashcardService.generarDesdeRecurso(recursoId);
+    public ResponseEntity<List<Flashcard>> generarDesdePdf(@PathVariable Long recursoId) {
+        List<Flashcard> nueva = flashcardService.generarDesdeRecurso(recursoId);
      return ResponseEntity.ok(nueva);
     }
     
