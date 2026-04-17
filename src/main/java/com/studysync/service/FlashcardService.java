@@ -9,4 +9,5 @@ public interface FlashcardService {
     
     // El nuevo método que usaremos para la IA y el PDF
     List<Flashcard> generarDesdeRecurso(Long recursoId);
+    Flashcard actualizarRepaso(Long id, boolean acierto);
 }

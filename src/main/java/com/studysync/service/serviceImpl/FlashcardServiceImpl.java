@@ -45,6 +45,27 @@ public class FlashcardServiceImpl implements FlashcardService {
         return flashcardRepository.save(flashcard);
     }
 
+    // --- NUEVO MÉTODO PARA EL ALGORITMO SRS ---
+    @Override
+    public Flashcard actualizarRepaso(Long id, boolean acierto) {
+        Flashcard f = flashcardRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Flashcard no encontrada"));
+
+        if (acierto) {
+            // Si acierta, sube de nivel
+            f.setNivelEspaciado(f.getNivelEspaciado() + 1);
+        } else {
+            // Si falla, vuelve al nivel 0 (estudiar pronto)
+            f.setNivelEspaciado(0);
+        }
+
+        // Cálculo de días: 2 elevado al nivel (1, 2, 4, 8, 16... días)
+        long diasExtra = (long) Math.pow(2, f.getNivelEspaciado());
+        f.setProximoRepaso(LocalDateTime.now().plusDays(diasExtra));
+
+        return flashcardRepository.save(f);
+    }
+
     @Override
     public List<Flashcard> generarDesdeRecurso(Long recursoId) {
         System.out.println("--- INICIANDO GENERACIÓN MÚLTIPLE DE FLASHCARDS ---");
@@ -52,19 +73,14 @@ public class FlashcardServiceImpl implements FlashcardService {
         Recurso recurso = recursoRepository.findById(recursoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Recurso no encontrado"));
 
-        System.out.println("1. Recurso encontrado: " + recurso.getNombre());
-        
         String textoPdf;
         try {
             textoPdf = extraerTextoDePdf(recurso.getUrlAcceso());
             if (textoPdf.length() > 5000) textoPdf = textoPdf.substring(0, 5000);
-            System.out.println("3. Texto extraído (longitud limitada): " + textoPdf.length());
         } catch (Exception e) {
-            System.out.println("ERROR EN PASO 3 (PDF): " + e.getMessage());
             throw e;
         }
 
-        // Nuevo prompt para pedir una lista limpia de varias tarjetas
         String promptTexto = "Analiza el siguiente texto y genera entre 3 y 5 flashcards de estudio. " +
                              "Usa estrictamente este formato por cada línea: Pregunta | Respuesta. " +
                              "No escribas introducciones ni listas numeradas, solo la línea con el separador |. " +
@@ -72,32 +88,23 @@ public class FlashcardServiceImpl implements FlashcardService {
 
         List<Flashcard> flashcardsGuardadas = new ArrayList<>();
         try {
-            // Obtenemos el texto bruto con todas las preguntas
             String respuestaBruta = llamarAGeminiManual(promptTexto);
             
-            // Buscamos el mazo
             MazoFlashcard mazo = null;
             List<MazoFlashcard> mazos = mazoRepository.findByAsignaturaId(recurso.getAsignatura().getId());
             if (!mazos.isEmpty()) {
                 mazo = mazos.get(0);
             }
 
-            // Procesamos cada línea como una Flashcard individual
             String[] lineas = respuestaBruta.split("\n");
             for (String linea : lineas) {
                 if (linea.contains("|")) {
                     Flashcard f = procesarLineaIA(linea);
                     f.setMazo(mazo);
-                    // GUARDADO INDIVIDUAL EN BD
                     flashcardsGuardadas.add(flashcardRepository.save(f));
-                    System.out.println("✅ Flashcard guardada individualmente: " + f.getAnverso());
                 }
             }
-            
-            System.out.println("4. Proceso completado. Total guardadas: " + flashcardsGuardadas.size());
-            
         } catch (Exception e) {
-            System.out.println("ERROR EN PASO 4 (GEMINI): " + e.getMessage());
             throw new RuntimeException("Error en la IA: " + e.getMessage());
         }
 
@@ -118,7 +125,7 @@ public class FlashcardServiceImpl implements FlashcardService {
 
     @SuppressWarnings("unchecked")
     private String llamarAGeminiManual(String prompt) {
-        // NO TOCAMOS LA URL: Mantenemos gemini-2.5-flash
+        // MANTENEMOS TU URL VERIFICADA
         String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
 
         Map<String, Object> body = Map.of(
@@ -127,15 +134,9 @@ public class FlashcardServiceImpl implements FlashcardService {
             )
         );
 
-        System.out.println("🚀 Llamando a Gemini para generación múltiple...");
-
         RestTemplate restTemplate = new RestTemplate();
         Map<String, Object> response = restTemplate.postForObject(url, body, Map.class);
-
-        if (response == null || !response.containsKey("candidates")) {
-            throw new RuntimeException("La respuesta de Gemini está vacía");
-        }
-
+        
         List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
         Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
         List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
@@ -148,7 +149,6 @@ public class FlashcardServiceImpl implements FlashcardService {
         Flashcard f = new Flashcard();
         
         if (partes.length >= 2) {
-            // Limpiamos posibles asteriscos o números que la IA suele poner (ej: "1. ¿Qué es...?")
             String anverso = partes[0].replaceAll("[\\*\\d\\.]", "").trim();
             f.setAnverso(anverso);
             f.setReverso(partes[1].trim());
@@ -159,7 +159,7 @@ public class FlashcardServiceImpl implements FlashcardService {
         
         f.setCreadaPorIa(true);
         f.setFechaCreacion(LocalDateTime.now());
-        f.setProximoRepaso(LocalDateTime.now());
+        f.setProximoRepaso(LocalDateTime.now()); // Para estudiar ya mismo
         f.setNivelEspaciado(0);
         
         return f;

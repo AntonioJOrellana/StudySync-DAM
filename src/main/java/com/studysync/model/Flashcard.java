@@ -37,4 +37,5 @@ public class Flashcard {
     @JoinColumn(name = "id_mazo", nullable = false)
     @JsonIgnore
     private MazoFlashcard mazo;
+    
 }
