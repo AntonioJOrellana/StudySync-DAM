@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/flashcards")
 public class FlashcardController {
@@ -31,12 +31,12 @@ public class FlashcardController {
     public ResponseEntity<List<Flashcard>> generarDesdePdf(@PathVariable Long recursoId) {
         return ResponseEntity.ok(flashcardService.generarDesdeRecurso(recursoId));
     }
-    
+
     // --- NUEVO: ACTUALIZAR REPASO (SM-2) ---
     // URL: POST http://localhost:8080/api/flashcards/5/repaso?acierto=true
     @PostMapping("/{id}/repaso")
     public ResponseEntity<Flashcard> responderFlashcard(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @RequestParam boolean acierto) {
         return ResponseEntity.ok(flashcardService.actualizarRepaso(id, acierto));
     }

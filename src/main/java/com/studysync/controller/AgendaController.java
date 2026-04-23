@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/agenda")
-@CrossOrigin(origins = "http://localhost:3000") // Permite la conexión con tu Frontend
+@CrossOrigin(origins = "http://localhost:5173") // Permite la conexión con tu Frontend
 public class AgendaController {
 
     @Autowired
@@ -20,7 +20,7 @@ public class AgendaController {
     @GetMapping("/usuario/{usuarioId}")
     public ResponseEntity<List<Agenda>> listarPorUsuario(@PathVariable Long usuarioId) {
         List<Agenda> eventos = agendaService.listarPorUsuario(usuarioId);
-        // Nota: Si el service lanza ResourceNotFoundException cuando está vacío, 
+        // Nota: Si el service lanza ResourceNotFoundException cuando está vacío,
         // el ControllerAdvice ya lo manejará. Si no, esto devuelve 200 OK.
         return ResponseEntity.ok(eventos);
     }
@@ -36,7 +36,8 @@ public class AgendaController {
     @DeleteMapping("/eliminar/{id}")
     public ResponseEntity<Void> eliminarEvento(@PathVariable Long id) {
         agendaService.eliminarEvento(id);
-        // Usamos noContent (204) porque es el estándar para borrados exitosos sin retorno de datos
+        // Usamos noContent (204) porque es el estándar para borrados exitosos sin
+        // retorno de datos
         return ResponseEntity.noContent().build();
     }
 }

@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/tareas") // <--- Añadido /api para consistencia
 public class TareaController {
@@ -48,7 +48,8 @@ public class TareaController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarTarea(@PathVariable Long id) {
         // Si no existe, el Service lanzará la excepción 404 automáticamente
-        // Aquí necesitarás añadir un método eliminar en el TareaService si no lo tienes,
+        // Aquí necesitarás añadir un método eliminar en el TareaService si no lo
+        // tienes,
         // o usar el repo directamente con una validación previa.
         return ResponseEntity.noContent().build();
     }

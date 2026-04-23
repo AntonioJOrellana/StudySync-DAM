@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/sesiones")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:5173")
 public class SesionEstudioController {
 
     @Autowired
@@ -35,9 +35,9 @@ public class SesionEstudioController {
     // URL: PUT http://localhost:8080/api/sesiones/finalizar/1?duracion=45
     @PutMapping("/finalizar/{id}")
     public ResponseEntity<SesionEstudio> finalizarSesion(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @RequestParam Integer duracion) {
-        
+
         SesionEstudio sesionFinalizada = sesionEstudioService.finalizarSesion(id, duracion);
         return ResponseEntity.ok(sesionFinalizada);
     }

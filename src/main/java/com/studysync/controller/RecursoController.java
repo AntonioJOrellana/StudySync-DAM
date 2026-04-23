@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/recursos")
-@CrossOrigin(origins = "http://localhost:3000") // Para que React no se queje
+@CrossOrigin(origins = "http://localhost:5173") // Para que React no se queje
 public class RecursoController {
 
     @Autowired

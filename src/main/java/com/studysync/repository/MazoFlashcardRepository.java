@@ -11,4 +11,6 @@ import org.springframework.stereotype.Repository;
 public interface MazoFlashcardRepository extends JpaRepository<MazoFlashcard, Long> {
     // Método para encontrar mazos por asignatura
     List<MazoFlashcard> findByAsignaturaId(Long asignaturaId);
+
+    List<MazoFlashcard> findByUsuarioId(Long usuarioId);
 }

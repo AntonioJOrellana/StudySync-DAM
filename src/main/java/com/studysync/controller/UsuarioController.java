@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/usuarios") // <--- Añadido /api
 public class UsuarioController {
@@ -26,13 +26,14 @@ public class UsuarioController {
     @GetMapping
     public ResponseEntity<List<Usuario>> obtenerTodos() {
         // Podrías añadir un listarTodos() en el Service
-        return ResponseEntity.ok(usuarioService.listarTodos()); 
+        return ResponseEntity.ok(usuarioService.listarTodos());
     }
 
     // REGISTRO
     @PostMapping("/registrar")
     public ResponseEntity<?> registrar(@RequestBody Usuario usuario) {
-        // La lógica de verificar si el email existe ya la pusimos en el UsuarioServiceImpl
+        // La lógica de verificar si el email existe ya la pusimos en el
+        // UsuarioServiceImpl
         // Eso hace que este método sea mucho más limpio
         try {
             // Ciframos antes de pasar al service (o podrías hacerlo dentro del service)
@@ -51,7 +52,8 @@ public class UsuarioController {
 
         if (userOpt.isPresent() && passwordEncoder.matches(loginReq.getPassword(), userOpt.get().getPassword())) {
             // ¡Importante! En una app real, aquí enviarías un Token (JWT)
-            // Por ahora, enviamos el objeto usuario (sin la password por seguridad si puedes)
+            // Por ahora, enviamos el objeto usuario (sin la password por seguridad si
+            // puedes)
             return ResponseEntity.ok(userOpt.get());
         }
 

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "mazo_flashcard")
@@ -29,11 +30,13 @@ public class MazoFlashcard {
     // --- VINCULACIÓN CON LA MATERIA ---
     @ManyToOne
     @JoinColumn(name = "id_asignatura", nullable = false)
-    @JsonIgnore // Evita que al cargar el mazo se cargue toda la asignatura y entremos en bucle
+    @JsonIgnoreProperties({ "usuario", "mazos", "tareas", "eventos" }) // Evita que al cargar el mazo se cargue toda la
+                                                                       // asignatura y entremos en bucle
     private Asignatura asignatura;
 
     // --- LIMPIEZA AUTOMÁTICA ---
-    // orphanRemoval = true hace que si quitas una flashcard de la lista, se borre de la BD
+    // orphanRemoval = true hace que si quitas una flashcard de la lista, se borre
+    // de la BD
     @OneToMany(mappedBy = "mazo", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Flashcard> flashcards;
 }
