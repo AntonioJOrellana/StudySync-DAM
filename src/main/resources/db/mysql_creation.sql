@@ -64,7 +64,7 @@ CREATE TABLE `asignatura` (
   PRIMARY KEY (`id_asignatura`),
   KEY `FK3ny9exio8cdbic7mfpmfhii2e` (`id_usuario`),
   CONSTRAINT `FK3ny9exio8cdbic7mfpmfhii2e` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -73,7 +73,7 @@ CREATE TABLE `asignatura` (
 
 LOCK TABLES `asignatura` WRITE;
 /*!40000 ALTER TABLE `asignatura` DISABLE KEYS */;
-INSERT INTO `asignatura` VALUES ('#3498db',1,3,'Programación Web','Dra. García','Desarrollo de aplicaciones con Spring Boot y MySQL'),('#e74c3c',2,3,'Bases de Datos','Ing. Pérez','Diseño lógico y normalización de datos SQL'),('#FF5733',3,3,'Programación Java',NULL,NULL),('#FF5733',4,3,'Prueba IA',NULL,NULL);
+INSERT INTO `asignatura` VALUES ('#3498db',1,3,'Programación Web','Dra. García','Desarrollo de aplicaciones con Spring Boot y MySQL'),('#e74c3c',2,3,'Bases de Datos','Ing. Pérez','Diseño lógico y normalización de datos SQL'),('#FF5733',3,3,'Programación Java',NULL,NULL),('#FF5733',4,3,'Prueba IA',NULL,NULL),('#56f500',5,3,'Prueba DB','Antonio Orellana','Es una prueba para ver como funciona todo'),('#c800ff',6,3,'Twitch','Juan Alberto','Para aprender mas sobre audiovisuales');
 /*!40000 ALTER TABLE `asignatura` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -127,7 +127,7 @@ CREATE TABLE `mazo_flashcard` (
   KEY `FKl9n1p440jp3h5to4pih0hu0vw` (`id_usuario`),
   CONSTRAINT `FKgav7sks5d8ck8cmsaqbe5j5l7` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`),
   CONSTRAINT `FKl9n1p440jp3h5to4pih0hu0vw` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -136,7 +136,7 @@ CREATE TABLE `mazo_flashcard` (
 
 LOCK TABLES `mazo_flashcard` WRITE;
 /*!40000 ALTER TABLE `mazo_flashcard` DISABLE KEYS */;
-INSERT INTO `mazo_flashcard` VALUES (1,1,1,'Conceptos Spring','Repaso de anotaciones y ciclo de vida'),(2,2,1,'Comandos SQL','Joins, Aggregations y DDL'),(4,3,1,'Mazo de JDBC',NULL),(3,4,3,'Clases',NULL),(2,5,3,'Querys',NULL),(3,6,3,'Repaso Override','Repaso de todas las etiquetas especialmente Override'),(4,7,3,'Vocabulario','Entreno de IA'),(2,8,3,'Holaaaaa','esto es una prueba'),(1,9,3,'21312332131','wd d sdfsffd s'),(2,10,3,'dsadsdasd','sadasdsadsd'),(2,11,3,'ddsdsfdsf','dfsdfdsff');
+INSERT INTO `mazo_flashcard` VALUES (1,1,1,'Conceptos Spring','Repaso de anotaciones y ciclo de vida'),(2,2,1,'Comandos SQL','Joins, Aggregations y DDL'),(4,3,1,'Mazo de JDBC',NULL),(3,4,3,'Clases',NULL),(2,5,3,'Querys',NULL),(3,6,3,'Repaso Override','Repaso de todas las etiquetas especialmente Override'),(4,7,3,'Vocabulario','Entreno de IA'),(2,8,3,'Holaaaaa','esto es una prueba'),(1,9,3,'21312332131','wd d sdfsffd s'),(2,10,3,'dsadsdasd','sadasdsadsd'),(2,11,3,'ddsdsfdsf','dfsdfdsff'),(1,12,3,'examen final','estudiar para examen');
 /*!40000 ALTER TABLE `mazo_flashcard` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -190,7 +190,7 @@ CREATE TABLE `sesion_estudio` (
   KEY `FKodsfhhjdj5e6lrirm4wdl843` (`id_usuario`),
   CONSTRAINT `FK7d5v4wtsn79q12ysllca6a8r8` FOREIGN KEY (`id_asignatura`) REFERENCES `asignatura` (`id_asignatura`),
   CONSTRAINT `FKodsfhhjdj5e6lrirm4wdl843` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -199,7 +199,7 @@ CREATE TABLE `sesion_estudio` (
 
 LOCK TABLES `sesion_estudio` WRITE;
 /*!40000 ALTER TABLE `sesion_estudio` DISABLE KEYS */;
-INSERT INTO `sesion_estudio` VALUES (60,'2026-04-15 17:00:00.000000',1,1,1,'estudio'),(45,'2026-04-16 10:00:00.000000',2,2,1,'repaso_flashcards');
+INSERT INTO `sesion_estudio` VALUES (60,'2026-04-15 17:00:00.000000',1,1,1,'estudio'),(45,'2026-04-16 10:00:00.000000',2,2,1,'repaso_flashcards'),(2,'2026-05-01 11:02:22.592437',1,3,3,'estudio'),(3,'2026-05-01 11:05:48.695455',3,4,3,'estudio');
 /*!40000 ALTER TABLE `sesion_estudio` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -277,4 +277,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-27 16:04:50
+-- Dump completed on 2026-05-03 16:32:32

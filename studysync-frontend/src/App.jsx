@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Home, Layers, Timer, Calendar, BarChart2, Zap, 
   ChevronRight 
@@ -32,8 +32,8 @@ const MainApp = () => {
   const [asignaturas, setAsignaturas] = useState([]);
   const [asignaturaActual, setAsignaturaActual] = useState(null);
 
-  // Carga inicial de asignaturas reales del usuario antonio123
-  useEffect(() => {
+  // Función para cargar materias (se puede llamar desde Dashboard al crear una nueva)
+  const cargarMaterias = useCallback(() => {
     if (user?.id) {
       asignaturaService.listarPorUsuario(user.id)
         .then(res => {
@@ -43,12 +43,15 @@ const MainApp = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    cargarMaterias();
+  }, [cargarMaterias]);
+
   const renderContent = () => {
     switch (activeTab) {
       case 'Inicio': 
-        return <Dashboard user={user} />;
+        return <Dashboard user={user} onMateriaCreada={cargarMaterias} />;
       case 'Flashcards': 
-        // Pasamos las asignaturas cargadas para que el modal las use
         return <FlashcardsPage asignaturasContext={asignaturas} />;
       case 'Modo Focus': 
         return <FocusModePage />;
@@ -59,12 +62,13 @@ const MainApp = () => {
       case 'MateriaDetalle': 
         return <MateriaDetallePage asignatura={asignaturaActual} />;
       default: 
-        return <Dashboard user={user} />;
+        return <Dashboard user={user} onMateriaCreada={cargarMaterias} />;
     }
   };
 
   return (
     <div className="flex h-screen bg-[#0A0A0A] text-white overflow-hidden font-sans">
+      
       {/* SIDEBAR IZQUIERDO */}
       <aside className="w-[280px] bg-[#0D0D0D] border-r border-white/5 flex flex-col shrink-0">
         <div className="p-10 flex items-center gap-3 text-indigo-500">
@@ -109,35 +113,51 @@ const MainApp = () => {
           </div>
           
           <div className="space-y-1">
-            {asignaturas.map((asig) => (
-              <button
-                key={asig.id_asignatura} // Corrección de error de "key" única
-                onClick={() => {
-                  setAsignaturaActual(asig);
-                  setActiveTab('MateriaDetalle');
-                }}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all group ${
-                  activeTab === 'MateriaDetalle' && asignaturaActual?.id_asignatura === asig.id_asignatura
-                    ? 'bg-indigo-500/10 text-white'
-                    : 'text-gray-500 hover:bg-white/5 hover:text-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-2 h-2 rounded-full" 
-                    style={{ backgroundColor: asig.color || '#6366f1' }}
+            {asignaturas.map((asig) => {
+              // Identificador único (id_asignatura de la DB o id de JS)
+              const idUnico = asig.id_asignatura || asig.id;
+              const esActiva = activeTab === 'MateriaDetalle' && asignaturaActual?.id_asignatura === idUnico;
+              const colorMateria = asig.color || '#6366f1';
+
+              return (
+                <button
+                  key={`sidebar-asig-${idUnico}`}
+                  onClick={() => {
+                    setAsignaturaActual(asig);
+                    setActiveTab('MateriaDetalle');
+                  }}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all group mb-1 ${
+                    esActiva 
+                      ? 'text-white' 
+                      : 'text-gray-500 hover:bg-white/5 hover:text-gray-300'
+                  }`}
+                  style={esActiva ? {
+                    backgroundColor: `${colorMateria}15`, // 15% de opacidad
+                    borderLeft: `3px solid ${colorMateria}`,
+                    borderRadius: '0 12px 12px 0'
+                  } : {}}
+                >
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]" 
+                      style={{ backgroundColor: colorMateria }}
+                    />
+                    <span className={`text-sm font-bold truncate max-w-[150px] ${esActiva ? 'translate-x-1' : ''} transition-transform`}>
+                      {asig.nombre}
+                    </span>
+                  </div>
+                  <ChevronRight 
+                    size={14} 
+                    className={`transition-all ${esActiva ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'}`} 
+                    style={{ color: colorMateria }}
                   />
-                  <span className="text-sm font-bold truncate max-w-[150px]">
-                    {asig.nombre}
-                  </span>
-                </div>
-                <ChevronRight size={14} className={`transition-opacity ${activeTab === 'MateriaDetalle' && asignaturaActual?.id_asignatura === asig.id_asignatura ? 'opacity-100' : 'opacity-0'}`} />
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </nav>
 
-        {/* PERFIL DE USUARIO (antonio123) */}
+        {/* PERFIL DE USUARIO */}
         <div className="p-6 mt-auto">
           <div className="bg-[#111111] border border-white/5 p-4 rounded-[24px] flex items-center gap-3 shadow-xl">
             <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white text-sm shadow-lg shadow-indigo-600/20">
@@ -145,7 +165,7 @@ const MainApp = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold text-white truncate">
-                {user?.username || 'antonio123'}
+                {user?.username || 'Usuario'}
               </p>
               <button 
                 onClick={logout}
