@@ -1,6 +1,6 @@
 package com.studysync.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -16,13 +16,13 @@ public class Flashcard {
     private long id;
 
     @Column(columnDefinition = "TEXT", nullable = false)
-    private String anverso;
+    private String anverso; // Asegúrate de usar 'anverso' en el Front
 
     @Column(columnDefinition = "TEXT", nullable = false)
-    private String reverso;
+    private String reverso; // Asegúrate de usar 'reverso' en el Front
 
     @Column(name = "nivel_espaciado")
-    private Integer nivelEspaciado = 0; // Por defecto empezamos en nivel 0
+    private Integer nivelEspaciado = 0;
 
     @Column(name = "proximo_repaso")
     private LocalDateTime proximoRepaso;
@@ -35,7 +35,6 @@ public class Flashcard {
 
     @ManyToOne
     @JoinColumn(name = "id_mazo", nullable = false)
-    @JsonIgnore
+    @JsonBackReference // Evita recursividad infinita con el Mazo
     private MazoFlashcard mazo;
-    
 }

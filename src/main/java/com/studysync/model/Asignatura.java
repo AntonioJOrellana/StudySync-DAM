@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
 @Table(name = "asignatura")
@@ -22,7 +23,7 @@ public class Asignatura {
     private String color; 
 
     @Column(length = 150)
-    private String profesor; // Cambiado de catedratico a profesor
+    private String profesor;
 
     @Column(columnDefinition = "TEXT")
     private String descripcion;
@@ -32,15 +33,14 @@ public class Asignatura {
     private Usuario usuario;
 
     @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
+    @JsonIgnore // Mantenemos ignore aquí para no saturar el objeto asignatura
     private List<Tarea> tareas;
 
-    // Relación con los nuevos Recursos (PDFs, Videos, etc.)
+    // RELACIÓN CORREGIDA: Ahora permite que los recursos viajen al frontend
     @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
+    @JsonManagedReference 
     private List<Recurso> recursos;
 
-    // Relación con los Mazos de Flashcards
     @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<MazoFlashcard> mazos;

@@ -3,6 +3,7 @@ package com.studysync.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Entity
 @Table(name = "recurso")
@@ -17,7 +18,7 @@ public class Recurso {
     @Column(nullable = false, length = 255)
     private String nombre;
 
-    @Enumerated(EnumType.STRING) // Guarda el nombre del enum (PDF, VIDEO...) en la BD
+    @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "ENUM('pdf', 'video', 'enlace', 'otro')")
     private TipoRecurso tipo;
 
@@ -25,16 +26,17 @@ public class Recurso {
     private String urlAcceso;
 
     @Column(length = 50)
-    private String metadata; // Aquí guardaremos el "2.4 MB" o "15 min"
+    private String metadata;
 
     @Column(name = "fecha_subida", updatable = false)
     private LocalDateTime fechaSubida = LocalDateTime.now();
 
+    // RELACIÓN CORREGIDA: Evita el bucle infinito al serializar a JSON
     @ManyToOne
     @JoinColumn(name = "id_asignatura", nullable = false)
+    @JsonBackReference
     private Asignatura asignatura;
 
-    // El Enum puede ir dentro de la clase o en un archivo aparte
     public enum TipoRecurso {
         pdf, video, enlace, otro
     }

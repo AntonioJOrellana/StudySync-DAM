@@ -1,14 +1,14 @@
 const API_BASE_URL = "http://localhost:8080/api/flashcards";
 
 export const flashcardService = {
-  // Obtener tarjetas que toca repasar hoy
+  // Obtener tarjetas pendientes
   async getPendientes(mazoId) {
     const response = await fetch(`${API_BASE_URL}/mazo/${mazoId}/pendientes`);
     if (!response.ok) throw new Error("Error al cargar pendientes");
     return await response.json();
   },
 
-  // Registrar si el usuario acertó o falló (Algoritmo SM-2)
+  // Algoritmo SM-2
   async registrarRepaso(id, acierto) {
     const response = await fetch(`${API_BASE_URL}/${id}/repaso?acierto=${acierto}`, {
       method: 'POST'
@@ -16,11 +16,12 @@ export const flashcardService = {
     return await response.json();
   },
 
-  // Magia: Generar flashcards con IA desde un PDF
-  async generarConIA(recursoId) {
+  // Generar con IA - Corregido el paso de parámetros
+  async generarConIA(idMazo, recursoId) {
     const response = await fetch(`${API_BASE_URL}/ia/recurso/${recursoId}`, {
       method: 'POST'
     });
+    if (!response.ok) throw new Error("Error en el servidor de IA");
     return await response.json();
   }
 };

@@ -3,7 +3,7 @@ package com.studysync.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
@@ -24,19 +24,15 @@ public class MazoFlashcard {
 
     @ManyToOne
     @JoinColumn(name = "id_usuario", nullable = false)
-    @JsonIgnore
+    @JsonIgnoreProperties("mazos") 
     private Usuario usuario;
 
-    // --- VINCULACIÓN CON LA MATERIA ---
     @ManyToOne
     @JoinColumn(name = "id_asignatura", nullable = false)
-    @JsonIgnoreProperties({ "usuario", "mazos", "tareas", "eventos" }) // Evita que al cargar el mazo se cargue toda la
-                                                                       // asignatura y entremos en bucle
+    @JsonIgnoreProperties({ "usuario", "mazos", "tareas", "recursos" })
     private Asignatura asignatura;
 
-    // --- LIMPIEZA AUTOMÁTICA ---
-    // orphanRemoval = true hace que si quitas una flashcard de la lista, se borre
-    // de la BD
     @OneToMany(mappedBy = "mazo", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference // IMPORTANTE: Envía las flashcards al Frontend
     private List<Flashcard> flashcards;
 }

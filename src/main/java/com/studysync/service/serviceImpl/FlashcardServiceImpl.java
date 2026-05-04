@@ -45,21 +45,17 @@ public class FlashcardServiceImpl implements FlashcardService {
         return flashcardRepository.save(flashcard);
     }
 
-    // --- NUEVO MÉTODO PARA EL ALGORITMO SRS ---
     @Override
     public Flashcard actualizarRepaso(Long id, boolean acierto) {
         Flashcard f = flashcardRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Flashcard no encontrada"));
 
         if (acierto) {
-            // Si acierta, sube de nivel
             f.setNivelEspaciado(f.getNivelEspaciado() + 1);
         } else {
-            // Si falla, vuelve al nivel 0 (estudiar pronto)
             f.setNivelEspaciado(0);
         }
 
-        // Cálculo de días: 2 elevado al nivel (1, 2, 4, 8, 16... días)
         long diasExtra = (long) Math.pow(2, f.getNivelEspaciado());
         f.setProximoRepaso(LocalDateTime.now().plusDays(diasExtra));
 
@@ -68,44 +64,63 @@ public class FlashcardServiceImpl implements FlashcardService {
 
     @Override
     public List<Flashcard> generarDesdeRecurso(Long recursoId) {
-        System.out.println("--- INICIANDO GENERACIÓN MÚLTIPLE DE FLASHCARDS ---");
+        System.out.println(">>> [BACKEND] Iniciando generación desde recurso ID: " + recursoId);
         
         Recurso recurso = recursoRepository.findById(recursoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Recurso no encontrado"));
 
+        // 1. EXTRAER TEXTO
         String textoPdf;
         try {
             textoPdf = extraerTextoDePdf(recurso.getUrlAcceso());
+            // Limitamos el texto para no saturar la API gratuita
             if (textoPdf.length() > 5000) textoPdf = textoPdf.substring(0, 5000);
+            System.out.println(">>> [PDF] Texto extraído correctamente. Longitud: " + textoPdf.length());
         } catch (Exception e) {
-            throw e;
+            System.err.println(">>> [ERROR PDF] No se pudo leer el archivo: " + e.getMessage());
+            throw new RuntimeException("Error leyendo el archivo físico: " + e.getMessage());
         }
 
+        // 2. PREPARAR PROMPT
         String promptTexto = "Analiza el siguiente texto y genera entre 3 y 5 flashcards de estudio. " +
                              "Usa estrictamente este formato por cada línea: Pregunta | Respuesta. " +
-                             "No escribas introducciones ni listas numeradas, solo la línea con el separador |. " +
+                             "No escribas introducciones ni listas numeradas. " +
                              "Texto: " + textoPdf;
 
         List<Flashcard> flashcardsGuardadas = new ArrayList<>();
         try {
+            // 3. LLAMAR A IA
             String respuestaBruta = llamarAGeminiManual(promptTexto);
+            System.out.println(">>> [IA] Respuesta recibida: " + respuestaBruta);
             
+            // 4. BUSCAR O CREAR MAZO (Evita que el mazo sea null)
             MazoFlashcard mazo = null;
             List<MazoFlashcard> mazos = mazoRepository.findByAsignaturaId(recurso.getAsignatura().getId());
-            if (!mazos.isEmpty()) {
+            
+            if (mazos.isEmpty()) {
+                System.out.println(">>> [MAZO] No existe mazo para esta asignatura. Creando uno...");
+                mazo = new MazoFlashcard();
+                mazo.setNombre("Mazo: " + recurso.getAsignatura().getNombre());
+                mazo.setAsignatura(recurso.getAsignatura());
+                mazo = mazoRepository.save(mazo);
+            } else {
                 mazo = mazos.get(0);
             }
 
+            // 5. PROCESAR LÍNEAS Y GUARDAR
             String[] lineas = respuestaBruta.split("\n");
             for (String linea : lineas) {
                 if (linea.contains("|")) {
                     Flashcard f = procesarLineaIA(linea);
-                    f.setMazo(mazo);
+                    f.setMazo(mazo); // Vinculación obligatoria
                     flashcardsGuardadas.add(flashcardRepository.save(f));
                 }
             }
+            System.out.println(">>> [EXITO] Se han guardado " + flashcardsGuardadas.size() + " tarjetas.");
+
         } catch (Exception e) {
-            throw new RuntimeException("Error en la IA: " + e.getMessage());
+            System.err.println(">>> [ERROR IA/DB] " + e.getMessage());
+            throw new RuntimeException("Error en la generación de flashcards: " + e.getMessage());
         }
 
         return flashcardsGuardadas;
@@ -113,20 +128,25 @@ public class FlashcardServiceImpl implements FlashcardService {
 
     private String extraerTextoDePdf(String ruta) {
         try {
+            // Buscamos el archivo en el sistema de archivos local
             File file = new File(ruta);
+            if (!file.exists()) {
+                throw new Exception("El archivo no existe en la ruta: " + file.getAbsolutePath());
+            }
             try (PDDocument document = PDDocument.load(file)) {
                 PDFTextStripper stripper = new PDFTextStripper();
                 return stripper.getText(document);
             } 
         } catch (Exception e) {
-            throw new RuntimeException("Error leyendo PDF: " + e.getMessage());
+            throw new RuntimeException(e.getMessage());
         }
     }
 
     @SuppressWarnings("unchecked")
     private String llamarAGeminiManual(String prompt) {
-        // MANTENEMOS TU URL VERIFICADA
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+        // Si tu prueba en ThunderClient fue con 2.5 y funcionó, déjala así. 
+        // Si falla, cámbiala a 1.5-flash.
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
 
         Map<String, Object> body = Map.of(
             "contents", List.of(
@@ -137,6 +157,10 @@ public class FlashcardServiceImpl implements FlashcardService {
         RestTemplate restTemplate = new RestTemplate();
         Map<String, Object> response = restTemplate.postForObject(url, body, Map.class);
         
+        if (response == null || !response.containsKey("candidates")) {
+            throw new RuntimeException("La respuesta de Gemini está vacía o es inválida.");
+        }
+
         List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
         Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
         List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
@@ -149,17 +173,19 @@ public class FlashcardServiceImpl implements FlashcardService {
         Flashcard f = new Flashcard();
         
         if (partes.length >= 2) {
-            String anverso = partes[0].replaceAll("[\\*\\d\\.]", "").trim();
+            // Limpieza básica de asteriscos o números que a veces mete la IA
+            String anverso = partes[0].replaceAll("[\\*]", "").trim();
+            String reverso = partes[1].replaceAll("[\\*]", "").trim();
             f.setAnverso(anverso);
-            f.setReverso(partes[1].trim());
+            f.setReverso(reverso);
         } else {
-            f.setAnverso("Concepto clave");
+            f.setAnverso("Concepto");
             f.setReverso(linea.trim());
         }
         
         f.setCreadaPorIa(true);
         f.setFechaCreacion(LocalDateTime.now());
-        f.setProximoRepaso(LocalDateTime.now()); // Para estudiar ya mismo
+        f.setProximoRepaso(LocalDateTime.now());
         f.setNivelEspaciado(0);
         
         return f;
