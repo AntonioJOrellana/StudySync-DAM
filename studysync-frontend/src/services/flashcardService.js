@@ -16,11 +16,13 @@ export const flashcardService = {
     return await response.json();
   },
 
-  // Generar con IA - Corregido el paso de parámetros
-  async generarConIA(idMazo, recursoId) {
-    const response = await fetch(`${API_BASE_URL}/ia/recurso/${recursoId}`, {
+  // --- GENERAR CON IA: URL ACTUALIZADA ---
+  async generarConIA(mazoId, recursoId) {
+    // Hemos añadido "/mazo/${mazoId}" al final para que coincida con el @PostMapping del Controller
+    const response = await fetch(`${API_BASE_URL}/ia/recurso/${recursoId}/mazo/${mazoId}`, {
       method: 'POST'
     });
+    
     if (!response.ok) throw new Error("Error en el servidor de IA");
     return await response.json();
   }
