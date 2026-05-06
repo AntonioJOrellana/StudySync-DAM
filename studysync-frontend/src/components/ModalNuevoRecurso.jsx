@@ -1,21 +1,35 @@
 import React, { useState } from 'react';
-import { X, Upload, FileText, Video, Monitor, Link as LinkIcon, CheckCircle2 } from 'lucide-react';
+import { X, Upload, FileText, Video, Monitor, Link as LinkIcon, CheckCircle2, Globe } from 'lucide-react';
 import { recursoService } from '../services/recursoService';
 
 const ModalNuevoRecurso = ({ isOpen, onClose, asignatura, onRecursoCreado }) => {
   const [tipo, setTipo] = useState('pdf');
   const [nombre, setNombre] = useState('');
   const [archivo, setArchivo] = useState(null);
+  const [enlace, setEnlace] = useState('');
   const [subiendo, setSubiendo] = useState(false);
 
   if (!isOpen) return null;
 
+  // CORRECCIÓN B: Ahora solo 'video' y 'enlace' piden URL. 
+  // 'pdf' y 'otro' permiten subir archivos físicos (Presentaciones, Word, etc.)
+  const esEnlace = tipo === 'enlace' || tipo === 'video';
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validación básica
     if (!nombre.trim()) {
       alert("Introduce un nombre para el recurso.");
+      return;
+    }
+
+    if (esEnlace && !enlace.trim()) {
+      alert("Introduce la URL del recurso.");
+      return;
+    }
+
+    if (!esEnlace && !archivo) {
+      alert("Por favor, selecciona un archivo.");
       return;
     }
 
@@ -24,20 +38,18 @@ const ModalNuevoRecurso = ({ isOpen, onClose, asignatura, onRecursoCreado }) => 
     const data = new FormData();
     data.append('nombre', nombre);
     data.append('tipo', tipo); 
-    
-    // CORRECCIÓN CLAVE: Usamos .id porque en tu Java el campo es 'private long id'
     data.append('idAsignatura', asignatura.id);
     
-    if (archivo) {
+    if (esEnlace) {
+      data.append('urlEnlace', enlace); 
+    } else {
       data.append('archivo', archivo);
     }
 
     try {
       await recursoService.subir(data);
-      onRecursoCreado(); // Recarga la lista en la página principal
-      onClose();         // Cierra el modal
-      setNombre('');     // Limpia el formulario
-      setArchivo(null);
+      onRecursoCreado();
+      handleClose(); // Usamos una función de cierre limpia
     } catch (err) {
       console.error("Error en subida:", err);
       alert(err.message);
@@ -46,11 +58,19 @@ const ModalNuevoRecurso = ({ isOpen, onClose, asignatura, onRecursoCreado }) => 
     }
   };
 
+  const handleClose = () => {
+    setNombre('');
+    setArchivo(null);
+    setEnlace('');
+    setTipo('pdf');
+    onClose();
+  };
+
   const tipos = [
-    { id: 'pdf', icon: <FileText size={18} />, label: 'Documento PDF' },
-    { id: 'video', icon: <Video size={18} />, label: 'Video / Clase' },
-    { id: 'enlace', icon: <LinkIcon size={18} />, label: 'Enlace Web' },
-    { id: 'otro', icon: <Monitor size={18} />, label: 'Otro' },
+    { id: 'pdf', icon: <FileText size={18} />, label: 'PDF' },
+    { id: 'video', icon: <Video size={18} />, label: 'YouTube' },
+    { id: 'enlace', icon: <LinkIcon size={18} />, label: 'Web' },
+    { id: 'otro', icon: <Monitor size={18} />, label: 'Presentación / Otros' },
   ];
 
   return (
@@ -65,7 +85,7 @@ const ModalNuevoRecurso = ({ isOpen, onClose, asignatura, onRecursoCreado }) => 
             </h2>
             <p className="text-gray-500 text-sm mt-1">Añadir material a {asignatura.nombre}</p>
           </div>
-          <button type="button" onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-gray-500 transition-colors">
+          <button type="button" onClick={handleClose} className="p-2 hover:bg-white/5 rounded-full text-gray-500 transition-colors">
             <X size={24} />
           </button>
         </div>
@@ -77,7 +97,12 @@ const ModalNuevoRecurso = ({ isOpen, onClose, asignatura, onRecursoCreado }) => 
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setTipo(t.id)}
+                onClick={() => {
+                    setTipo(t.id);
+                    // Limpiamos los inputs al cambiar de tipo para evitar confusiones
+                    setArchivo(null);
+                    setEnlace('');
+                }}
                 className={`flex items-center gap-3 p-4 rounded-2xl border transition-all ${
                   tipo === t.id 
                   ? 'bg-white/5 border-white/20 text-white shadow-lg' 
@@ -98,26 +123,45 @@ const ModalNuevoRecurso = ({ isOpen, onClose, asignatura, onRecursoCreado }) => 
               type="text" 
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              placeholder="Ej: Apuntes Tema 1"
+              placeholder="Ej: Presentación Tema 2 / Link Video"
               className="w-full bg-[#111] border border-white/5 rounded-2xl p-4 text-white focus:outline-none focus:border-white/20 transition-all"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Archivo</label>
-            <div className="relative group">
-              <input 
-                type="file" 
-                onChange={(e) => setArchivo(e.target.files[0])}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              />
-              <div className="bg-[#111] border-2 border-dashed border-white/5 group-hover:border-white/10 rounded-2xl p-8 flex flex-col items-center justify-center transition-all">
-                <Upload size={20} className="mb-2 text-gray-500" />
-                <p className="text-sm font-bold text-gray-400">
-                  {archivo ? archivo.name : "Subir archivo o PDF"}
-                </p>
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">
+                {esEnlace ? "Enlace / URL" : "Archivo (PDF, PPTX, DOCX, TXT)"}
+            </label>
+            
+            {esEnlace ? (
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                    <Globe size={18} />
+                </div>
+                <input 
+                  required
+                  type="url" 
+                  value={enlace}
+                  onChange={(e) => setEnlace(e.target.value)}
+                  placeholder="https://www.ejemplo.com"
+                  className="w-full bg-[#111] border border-white/5 rounded-2xl p-4 pl-12 text-white focus:outline-none focus:border-white/20 transition-all"
+                />
               </div>
-            </div>
+            ) : (
+              <div className="relative group">
+                <input 
+                  type="file" 
+                  onChange={(e) => setArchivo(e.target.files[0])}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                />
+                <div className="bg-[#111] border-2 border-dashed border-white/5 group-hover:border-white/10 rounded-2xl p-8 flex flex-col items-center justify-center transition-all">
+                  <Upload size={20} className="mb-2 text-gray-500" />
+                  <p className="text-sm font-bold text-gray-400 text-center">
+                    {archivo ? archivo.name : "Subir archivo (PPTX, PDF, etc.)"}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <button 

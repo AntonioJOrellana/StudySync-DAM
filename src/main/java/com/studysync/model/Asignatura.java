@@ -30,10 +30,11 @@ public class Asignatura {
 
     @ManyToOne
     @JoinColumn(name = "id_usuario", nullable = false)
+    @JsonIgnore // Esto corta el bucle y permite que la lista de materias cargue
     private Usuario usuario;
 
     @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore // Mantenemos ignore aquí para no saturar el objeto asignatura
+    @JsonManagedReference // Mantenemos ignore aquí para no saturar el objeto asignatura
     private List<Tarea> tareas;
 
     // RELACIÓN CORREGIDA: Ahora permite que los recursos viajen al frontend
@@ -42,6 +43,6 @@ public class Asignatura {
     private List<Recurso> recursos;
 
     @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
+    @JsonManagedReference
     private List<MazoFlashcard> mazos;
 }

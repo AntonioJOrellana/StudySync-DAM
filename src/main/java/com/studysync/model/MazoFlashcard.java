@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
@@ -24,12 +26,12 @@ public class MazoFlashcard {
 
     @ManyToOne
     @JoinColumn(name = "id_usuario", nullable = false)
-    @JsonIgnoreProperties("mazos") 
+    @JsonIgnore
     private Usuario usuario;
 
     @ManyToOne
     @JoinColumn(name = "id_asignatura", nullable = false)
-    @JsonIgnoreProperties({ "usuario", "mazos", "tareas", "recursos" })
+    @JsonIgnoreProperties({"recursos", "mazos", "tareas", "usuario"})
     private Asignatura asignatura;
 
     @OneToMany(mappedBy = "mazo", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -26,12 +26,34 @@ public class RecursoServiceImpl implements RecursoService {
     @Autowired
     private AsignaturaRepository asignaturaRepository;
 
-    // DEFINE AQUÍ TU RUTA EXTERNA (Cámbiala a la carpeta que quieras en tu PC)
     private final String DIRECTORIO_SUBIDAS = "C:/studysync_files/uploads/";
 
     @Override
     public List<Recurso> listarPorAsignatura(Long idAsignatura) {
         return recursoRepository.findByAsignatura_Id(idAsignatura);
+    }
+
+    /**
+     * NUEVO MÉTODO: Guarda recursos que son solo texto/URL (YouTube, Enlaces Web)
+     */
+    @Override
+    public Recurso guardarEnlace(String nombre, String tipo, Long idAsignatura, String urlEnlace) {
+        Asignatura asig = asignaturaRepository.findById(idAsignatura)
+                .orElseThrow(() -> new ResourceNotFoundException("Asignatura no encontrada con ID: " + idAsignatura));
+
+        Recurso recurso = new Recurso();
+        recurso.setNombre(nombre);
+        recurso.setAsignatura(asig);
+        recurso.setUrlAcceso(urlEnlace); // Guardamos la URL directamente
+        recurso.setMetadata("URL");
+
+        try {
+            recurso.setTipo(Recurso.TipoRecurso.valueOf(tipo.toLowerCase().trim()));
+        } catch (Exception e) {
+            recurso.setTipo(Recurso.TipoRecurso.enlace);
+        }
+
+        return recursoRepository.save(recurso);
     }
 
     @Override
@@ -51,18 +73,15 @@ public class RecursoServiceImpl implements RecursoService {
 
         if (archivo != null && !archivo.isEmpty()) {
             try {
-                // 1. Crear el directorio si no existe
                 File directorio = new File(DIRECTORIO_SUBIDAS);
                 if (!directorio.exists()) directorio.mkdirs();
 
-                // 2. Definir la ruta completa del archivo
+                // Usamos el nombre original pero le ponemos el timestamp para evitar archivos repetidos
                 String nombreArchivo = System.currentTimeMillis() + "_" + archivo.getOriginalFilename();
                 Path rutaCompleta = Paths.get(DIRECTORIO_SUBIDAS + nombreArchivo);
 
-                // 3. GUARDAR EL ARCHIVO FÍSICAMENTE EN EL DISCO
                 Files.copy(archivo.getInputStream(), rutaCompleta);
 
-                // 4. Guardamos la RUTA ABSOLUTA en la BD para que la IA la encuentre
                 recurso.setUrlAcceso(rutaCompleta.toString());
                 
                 long sizeInKb = archivo.getSize() / 1024;
@@ -72,8 +91,9 @@ public class RecursoServiceImpl implements RecursoService {
                 throw new RuntimeException("Error al guardar el archivo físico: " + e.getMessage());
             }
         } else {
-            recurso.setUrlAcceso("enlace-externo");
-            recurso.setMetadata("URL");
+            // Si por alguna razón llega aquí sin archivo y no es enlace
+            recurso.setUrlAcceso("sin-archivo");
+            recurso.setMetadata("N/A");
         }
 
         return recursoRepository.save(recurso);
@@ -89,7 +109,6 @@ public class RecursoServiceImpl implements RecursoService {
         Recurso recurso = recursoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No existe el recurso " + id));
         
-        // Opcional: Borrar el archivo del disco cuando borres el recurso
         try {
             Files.deleteIfExists(Paths.get(recurso.getUrlAcceso()));
         } catch (IOException ignored) {}

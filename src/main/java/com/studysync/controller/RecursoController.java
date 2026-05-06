@@ -26,14 +26,22 @@ public class RecursoController {
 
     @PostMapping("/subir")
     public ResponseEntity<Recurso> guardarRecurso(
-            @RequestParam("nombre") String nombre,
-            @RequestParam("tipo") String tipo,
-            @RequestParam("idAsignatura") Long idAsignatura,
-            @RequestParam(value = "archivo", required = false) MultipartFile archivo) {
-        
-        Recurso nuevoRecurso = recursoService.procesarYGuardar(nombre, tipo, idAsignatura, archivo);
+        @RequestParam("nombre") String nombre,
+        @RequestParam("tipo") String tipo,
+        @RequestParam("idAsignatura") Long idAsignatura,
+        @RequestParam(value = "archivo", required = false) MultipartFile archivo,
+        @RequestParam(value = "urlEnlace", required = false) String urlEnlace) { // <--- Falta este parámetro
+    
+    // Si es tipo enlace o video, y no viene archivo, usamos la urlEnlace
+    if ((tipo.equals("enlace") || tipo.equals("video")) && (archivo == null || archivo.isEmpty())) {
+        Recurso nuevoRecurso = recursoService.guardarEnlace(nombre, tipo, idAsignatura, urlEnlace);
         return ResponseEntity.status(HttpStatus.CREATED).body(nuevoRecurso);
     }
+    
+    // Para PDF y OTRO (archivos físicos)
+    Recurso nuevoRecurso = recursoService.procesarYGuardar(nombre, tipo, idAsignatura, archivo);
+    return ResponseEntity.status(HttpStatus.CREATED).body(nuevoRecurso);
+}
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarRecurso(@PathVariable Long id) {

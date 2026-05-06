@@ -29,17 +29,24 @@ const SplashScreen = () => (
 const MainApp = () => {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('Inicio');
-  const [asignaturas, setAsignaturas] = useState([]);
+  const [asignaturas, setAsignaturas] = useState([]); // Inicializado como array vacío
   const [asignaturaActual, setAsignaturaActual] = useState(null);
 
-  // Función para cargar materias (se puede llamar desde Dashboard al crear una nueva)
+  // Función para cargar materias corregida
   const cargarMaterias = useCallback(() => {
     if (user?.id) {
       asignaturaService.listarPorUsuario(user.id)
         .then(res => {
-          setAsignaturas(res.data || []);
+          // Validamos si la respuesta es un array o si viene paginada (res.data.content)
+          const datos = Array.isArray(res.data) 
+            ? res.data 
+            : (res.data?.content || []);
+          setAsignaturas(datos);
         })
-        .catch(err => console.error("Error cargando materias:", err));
+        .catch(err => {
+          console.error("Error cargando materias:", err);
+          setAsignaturas([]); // En caso de error, reseteamos a array vacío para no romper el .map
+        });
     }
   }, [user]);
 
@@ -113,47 +120,51 @@ const MainApp = () => {
           </div>
           
           <div className="space-y-1">
-            {asignaturas.map((asig) => {
-              // Identificador único (id_asignatura de la DB o id de JS)
-              const idUnico = asig.id_asignatura || asig.id;
-              const esActiva = activeTab === 'MateriaDetalle' && asignaturaActual?.id_asignatura === idUnico;
-              const colorMateria = asig.color || '#6366f1';
+            {/* CORRECCIÓN: Verificamos que asignaturas sea un array antes del .map */}
+            {Array.isArray(asignaturas) && asignaturas.length > 0 ? (
+              asignaturas.map((asig) => {
+                const idUnico = asig.id_asignatura || asig.id;
+                const esActiva = activeTab === 'MateriaDetalle' && asignaturaActual?.id_asignatura === idUnico;
+                const colorMateria = asig.color || '#6366f1';
 
-              return (
-                <button
-                  key={`sidebar-asig-${idUnico}`}
-                  onClick={() => {
-                    setAsignaturaActual(asig);
-                    setActiveTab('MateriaDetalle');
-                  }}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all group mb-1 ${
-                    esActiva 
-                      ? 'text-white' 
-                      : 'text-gray-500 hover:bg-white/5 hover:text-gray-300'
-                  }`}
-                  style={esActiva ? {
-                    backgroundColor: `${colorMateria}15`, // 15% de opacidad
-                    borderLeft: `3px solid ${colorMateria}`,
-                    borderRadius: '0 12px 12px 0'
-                  } : {}}
-                >
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]" 
-                      style={{ backgroundColor: colorMateria }}
+                return (
+                  <button
+                    key={`sidebar-asig-${idUnico}`}
+                    onClick={() => {
+                      setAsignaturaActual(asig);
+                      setActiveTab('MateriaDetalle');
+                    }}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all group mb-1 ${
+                      esActiva 
+                        ? 'text-white' 
+                        : 'text-gray-500 hover:bg-white/5 hover:text-gray-300'
+                    }`}
+                    style={esActiva ? {
+                      backgroundColor: `${colorMateria}15`, 
+                      borderLeft: `3px solid ${colorMateria}`,
+                      borderRadius: '0 12px 12px 0'
+                    } : {}}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]" 
+                        style={{ backgroundColor: colorMateria }}
+                      />
+                      <span className={`text-sm font-bold truncate max-w-[150px] ${esActiva ? 'translate-x-1' : ''} transition-transform`}>
+                        {asig.nombre}
+                      </span>
+                    </div>
+                    <ChevronRight 
+                      size={14} 
+                      className={`transition-all ${esActiva ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'}`} 
+                      style={{ color: colorMateria }}
                     />
-                    <span className={`text-sm font-bold truncate max-w-[150px] ${esActiva ? 'translate-x-1' : ''} transition-transform`}>
-                      {asig.nombre}
-                    </span>
-                  </div>
-                  <ChevronRight 
-                    size={14} 
-                    className={`transition-all ${esActiva ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'}`} 
-                    style={{ color: colorMateria }}
-                  />
-                </button>
-              );
-            })}
+                  </button>
+                );
+              })
+            ) : (
+              <p className="px-4 text-[10px] text-gray-700 italic">No hay materias disponibles</p>
+            )}
           </div>
         </nav>
 

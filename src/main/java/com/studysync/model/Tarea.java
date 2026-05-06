@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 @Entity
 @Table(name = "tarea")
 @Data
@@ -29,7 +31,7 @@ public class Tarea {
 
     @ManyToOne
     @JoinColumn(name = "id_asignatura", nullable = false)
-    // QUITAMOS EL @JsonIgnore de aquí para que deje entrar datos
+    @JsonBackReference
     private Asignatura asignatura;
 
     @Enumerated(EnumType.STRING)

@@ -19,7 +19,8 @@ public class Recurso {
     private String nombre;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "ENUM('pdf', 'video', 'enlace', 'otro')")
+    @Column(columnDefinition = "ENUM('pdf', 'video', 'enlace', 'otro', 'pptx', 'docx')")
+    // ^ CORREGIDO: Ahora la base de datos acepta 'pptx' y 'docx'
     private TipoRecurso tipo;
 
     @Column(name = "url_acceso", nullable = false, columnDefinition = "TEXT")
@@ -31,14 +32,13 @@ public class Recurso {
     @Column(name = "fecha_subida", updatable = false)
     private LocalDateTime fechaSubida = LocalDateTime.now();
 
-    // RELACIÓN CORREGIDA: Evita el bucle infinito al serializar a JSON
     @ManyToOne
     @JoinColumn(name = "id_asignatura", nullable = false)
-    @JsonBackReference
+    @JsonBackReference // Evita que el archivo intente cargar la asignatura en bucle
     private Asignatura asignatura;
 
     public enum TipoRecurso {
-        pdf, video, enlace, otro
+        pdf, video, enlace, otro, pptx, docx
     }
 
     public String getUrl() { return urlAcceso; }
