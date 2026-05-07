@@ -137,15 +137,26 @@ public class FlashcardServiceImpl implements FlashcardService {
     private String extraerTextoDePowerPoint(String ruta) throws Exception {
         StringBuilder sb = new StringBuilder();
         File file = new File(ruta);
+        
+        // Usamos BufferedInputStream para mejorar la velocidad de lectura del archivo
         try (FileInputStream fis = new FileInputStream(file);
-             XMLSlideShow ppt = new XMLSlideShow(fis)) {
+            XMLSlideShow ppt = new XMLSlideShow(fis)) {
+            
             for (XSLFSlide slide : ppt.getSlides()) {
                 for (XSLFShape shape : slide.getShapes()) {
-                    if (shape instanceof XSLFTextShape) {
-                        sb.append(((XSLFTextShape) shape).getText()).append(" ");
+                    // Verificamos si es una forma de texto de manera más directa
+                    if (shape instanceof XSLFTextShape textShape) {
+                        String text = textShape.getText();
+                        if (text != null && !text.isBlank()) {
+                            sb.append(text).append(" ");
+                        }
                     }
                 }
+                sb.append("\n"); // Separador por diapositiva para ayudar a la IA
             }
+        } catch (Exception e) {
+            System.err.println("Error específico en PPTX: " + e.getMessage());
+            throw e;
         }
         return limpiarTexto(sb.toString());
     }
@@ -169,20 +180,33 @@ public class FlashcardServiceImpl implements FlashcardService {
     }
 
     private List<Flashcard> ejecutarGeneracionIA(String prompt, MazoFlashcard mazo) {
-        List<Flashcard> guardadas = new ArrayList<>();
+        // 1. Llamada a la IA (fuera del bucle de DB)
         String respuestaIA = llamarAGeminiManual(prompt);
         
-        if (respuestaIA == null) return guardadas;
+        if (respuestaIA == null || respuestaIA.isBlank()) {
+            return new ArrayList<>();
+        }
 
+        // 2. Creamos una lista temporal en memoria
+        List<Flashcard> listaParaGuardar = new ArrayList<>();
         String[] lineas = respuestaIA.split("\n");
+
         for (String linea : lineas) {
             if (linea.contains("|")) {
                 Flashcard f = procesarLineaIA(linea);
                 f.setMazo(mazo);
-                guardadas.add(flashcardRepository.save(f));
+                // Agregamos a la lista local, NO a la base de datos todavía
+                listaParaGuardar.add(f);
             }
         }
-        return guardadas;
+
+        // 3. Guardado en bloque (Batch Save)
+        // Esto hace una sola transacción y es muchísimo más rápido
+        if (!listaParaGuardar.isEmpty()) {
+            return flashcardRepository.saveAll(listaParaGuardar);
+        }
+
+        return new ArrayList<>();
     }
 
     @SuppressWarnings("unchecked")
@@ -192,7 +216,7 @@ public class FlashcardServiceImpl implements FlashcardService {
         // Configuración de Timeouts para evitar cortes de conexión
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5000);
-        factory.setReadTimeout(35000); // 35 segundos de espera para la IA
+        factory.setReadTimeout(60000); // 60 segundos de espera para la IA
         RestTemplate restTemplate = new RestTemplate(factory);
 
         Map<String, Object> textPart = new HashMap<>();
