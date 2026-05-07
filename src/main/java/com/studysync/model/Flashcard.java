@@ -16,16 +16,18 @@ public class Flashcard {
     private long id;
 
     @Column(columnDefinition = "TEXT", nullable = false)
-    private String anverso; // Asegúrate de usar 'anverso' en el Front
+    private String anverso;
 
     @Column(columnDefinition = "TEXT", nullable = false)
-    private String reverso; // Asegúrate de usar 'reverso' en el Front
+    private String reverso;
 
+    // Empezamos en nivel 0 (nueva)
     @Column(name = "nivel_espaciado")
     private Integer nivelEspaciado = 0;
 
+    // Por defecto, disponible para repasar desde el segundo 1
     @Column(name = "proximo_repaso")
-    private LocalDateTime proximoRepaso;
+    private LocalDateTime proximoRepaso = LocalDateTime.now();
 
     @Column(name = "creada_por_ia")
     private Boolean creadaPorIa = false;
@@ -35,6 +37,6 @@ public class Flashcard {
 
     @ManyToOne
     @JoinColumn(name = "id_mazo", nullable = false)
-    @JsonBackReference // Evita recursividad infinita con el Mazo
+    @JsonBackReference // El mazo manda, la tarjeta obedece (evita el bucle)
     private MazoFlashcard mazo;
 }

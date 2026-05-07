@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Entity
 @Table(name = "sesion_estudio")
 @Data
@@ -26,6 +28,7 @@ public class SesionEstudio {
 
     @ManyToOne
     @JoinColumn(name = "id_asignatura", nullable = false)
+    @JsonIgnoreProperties({"sesiones", "mazos", "tareas", "recursos"}) // Esto corta la recursión
     private Asignatura asignatura; 
 
     @Enumerated(EnumType.STRING)

@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -26,15 +25,15 @@ public class MazoFlashcard {
 
     @ManyToOne
     @JoinColumn(name = "id_usuario", nullable = false)
-    @JsonIgnore
+    @JsonIgnore // No solemos necesitar los datos del usuario al ver mazos
     private Usuario usuario;
 
     @ManyToOne
     @JoinColumn(name = "id_asignatura", nullable = false)
-    @JsonIgnoreProperties({"recursos", "mazos", "tareas", "usuario"})
+    @JsonIgnoreProperties({"mazos", "tareas", "recursos"}) // Evita bucle con Asignatura
     private Asignatura asignatura;
 
     @OneToMany(mappedBy = "mazo", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference // IMPORTANTE: Envía las flashcards al Frontend
+    @JsonManagedReference // Muestra las tarjetas cuando pides el mazo
     private List<Flashcard> flashcards;
 }

@@ -31,8 +31,6 @@ public class MazoFlashcardController {
 
     @GetMapping("/usuario/{usuarioId}")
     public ResponseEntity<List<MazoFlashcard>> listarPorUsuario(@PathVariable Long usuarioId) {
-        // Importante: Asegúrate de que en tu modelo MazoFlashcard.java
-        // la relación con Asignatura NO tenga @JsonIgnore
         List<MazoFlashcard> mazos = mazoRepository.findByUsuarioId(usuarioId);
         return ResponseEntity.ok(mazos);
     }
@@ -41,7 +39,9 @@ public class MazoFlashcardController {
     public ResponseEntity<MazoFlashcard> crearMazo(@RequestBody Map<String, Object> payload) {
         try {
             Map<String, Object> asigMap = (Map<String, Object>) payload.get("asignatura");
-            Long asignaturaId = Long.valueOf(asigMap.get("id_asignatura").toString());
+            // CORRECCIÓN: Buscamos "id" porque así viene en tu JSON de Asignatura
+            Object idAsignaturaRaw = asigMap.get("id") != null ? asigMap.get("id") : asigMap.get("id_asignatura");
+            Long asignaturaId = Long.valueOf(idAsignaturaRaw.toString());
 
             Map<String, Object> userMap = (Map<String, Object>) payload.get("usuario");
             Long usuarioId = Long.valueOf(userMap.get("id").toString());
@@ -61,6 +61,7 @@ public class MazoFlashcardController {
             MazoFlashcard guardado = mazoRepository.save(mazo);
             return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
         } catch (Exception e) {
+            e.printStackTrace(); // Para que veas el error en la consola de Java
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
     }

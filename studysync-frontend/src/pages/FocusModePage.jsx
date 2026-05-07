@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Play, Square, Settings, Lightbulb, ChevronDown } from 'lucide-react';
 
@@ -12,25 +12,26 @@ const FocusModePage = () => {
   const [asigSeleccionada, setAsigSeleccionada] = useState(null);
   const [sesionesHoy, setSesionesHoy] = useState([]);
   
-  // Recuperamos usuario (ID 3 según tus datos)
+  // Recuperamos usuario (ID 3 por defecto)
   const usuario = JSON.parse(localStorage.getItem('usuario')) || { id: 3, username: "antonio123" };
 
   // --- CARGA INICIAL ---
-  useEffect(() => {
-    const fetchDatos = async () => {
-      try {
-        const resAsig = await axios.get(`http://localhost:8080/api/asignaturas/usuario/${usuario.id}`);
-        setAsignaturas(resAsig.data);
-        if (resAsig.data.length > 0) setAsigSeleccionada(resAsig.data[0]);
+  const fetchDatos = useCallback(async () => {
+    try {
+      const resAsig = await axios.get(`http://localhost:8080/api/asignaturas/usuario/${usuario.id}`);
+      setAsignaturas(resAsig.data);
+      if (resAsig.data.length > 0) setAsigSeleccionada(resAsig.data[0]);
 
-        const resSesiones = await axios.get(`http://localhost:8080/api/sesiones/usuario/${usuario.id}`);
-        setSesionesHoy(resSesiones.data);
-      } catch (err) {
-        console.error("Error cargando datos:", err);
-      }
-    };
-    fetchDatos();
+      const resSesiones = await axios.get(`http://localhost:8080/api/sesiones/usuario/${usuario.id}`);
+      setSesionesHoy(resSesiones.data);
+    } catch (err) {
+      console.error("Error cargando datos iniciales:", err);
+    }
   }, [usuario.id]);
+
+  useEffect(() => {
+    fetchDatos();
+  }, [fetchDatos]);
 
   // --- LÓGICA TEMPORIZADOR ---
   useEffect(() => {
@@ -43,43 +44,63 @@ const FocusModePage = () => {
     return () => clearInterval(intervalo);
   }, [activo, segundos]);
 
-  // --- FUNCIONES API ---
+  // --- FUNCIONES API CORREGIDAS ---
   const iniciarSesion = async () => {
-    if (!asigSeleccionada) return alert("Selecciona asignatura");
+    if (!asigSeleccionada) return alert("Selecciona una asignatura primero");
+    
     try {
-      const res = await axios.post('http://localhost:8080/api/sesiones/iniciar', {
+      // CORRECCIÓN CLAVE: Enviamos objetos "planos" solo con el ID
+      // Esto evita que Jackson en el Backend intente serializar listas de Mazos/Flashcards
+      const payload = {
         usuario: { id: usuario.id },
         asignatura: { id: asigSeleccionada.id },
-        tipo: 'estudio'
-      });
-      setIdSesionActual(res.data.id);
-      setActivo(true);
-    } catch (err) { console.error(err); }
+        tipo: 'estudio',
+        fechaInicio: new Date().toISOString()
+      };
+
+      const res = await axios.post('http://localhost:8080/api/sesiones/iniciar', payload);
+      
+      if (res.data && res.data.id_sesion || res.data.id) {
+        setIdSesionActual(res.data.id_sesion || res.data.id);
+        setActivo(true);
+        console.log("Sesión iniciada correctamente");
+      }
+    } catch (err) { 
+      console.error("Error al iniciar sesión (Backend):", err.response?.data || err.message);
+      alert("Error 500: El servidor no pudo procesar la asignatura. Revisa las relaciones en Java.");
+    }
   };
 
   const finalizarSesion = async () => {
     if (!idSesionActual) {
-        setActivo(false);
-        setSegundos(25 * 60);
-        return;
-    };
+      setActivo(false);
+      setSegundos(25 * 60);
+      return;
+    }
+
+    // Calculamos los minutos transcurridos (mínimo 1)
     const duracionReal = Math.max(1, Math.floor((25 * 60 - segundos) / 60));
+
     try {
       await axios.put(`http://localhost:8080/api/sesiones/finalizar/${idSesionActual}?duracion=${duracionReal}`);
+      
+      // Reset de estados
       setActivo(false);
       setSegundos(25 * 60);
       setIdSesionActual(null);
+      
+      // Refrescar lista de sesiones
       const res = await axios.get(`http://localhost:8080/api/sesiones/usuario/${usuario.id}`);
       setSesionesHoy(res.data);
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error("Error al finalizar sesión:", err);
+      setActivo(false); // Forzamos parada aunque falle el registro
+    }
   };
 
   const format = (s) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 
   return (
-    /* CAMBIO CLAVE: Usamos h-full y overflow-y-auto igual que en FlashcardsPage 
-       Añadimos p-10 para mantener consistencia de espaciado.
-    */
     <div className="h-full bg-[#0A0A0A] text-white p-10 overflow-y-auto custom-scrollbar">
       
       <header className="mb-10">
@@ -103,6 +124,7 @@ const FocusModePage = () => {
                 className="appearance-none bg-[#1A1A1A] text-gray-300 text-sm border border-white/10 rounded-full px-8 py-2 pr-12 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition-all hover:bg-[#222]"
                 value={asigSeleccionada?.id || ""}
                 onChange={(e) => setAsigSeleccionada(asignaturas.find(a => a.id === Number(e.target.value)))}
+                disabled={activo} // Bloqueamos cambio mientras estudia
               >
                 {asignaturas.length > 0 ? (
                   asignaturas.map(a => (
@@ -134,12 +156,21 @@ const FocusModePage = () => {
 
             {/* Botones de Control */}
             <div className="flex items-center gap-6">
-              <button onClick={finalizarSesion} className="w-14 h-14 bg-[#1A1A1A] rounded-full flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 transition-colors">
+              <button 
+                onClick={finalizarSesion} 
+                className="w-14 h-14 bg-[#1A1A1A] rounded-full flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                title="Detener y guardar"
+              >
                 <Square size={20} fill="currentColor" />
               </button>
-              <button onClick={activo ? () => setActivo(false) : iniciarSesion} className="w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-lg shadow-indigo-600/20">
+              
+              <button 
+                onClick={activo ? () => setActivo(false) : iniciarSesion} 
+                className="w-20 h-20 bg-indigo-600 rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-lg shadow-indigo-600/20"
+              >
                 {activo ? <span className="text-2xl font-bold">||</span> : <Play size={32} fill="white" className="ml-1" />}
               </button>
+
               <button className="w-14 h-14 bg-[#1A1A1A] rounded-full flex items-center justify-center hover:bg-white/5 transition-colors">
                 <Settings size={20} />
               </button>
@@ -151,8 +182,8 @@ const FocusModePage = () => {
             <h3 className="text-xl font-bold mb-6">Sesiones de Hoy</h3>
             <div className="space-y-4">
               {sesionesHoy.length === 0 && <p className="text-gray-600 italic text-sm">No hay sesiones hoy.</p>}
-              {sesionesHoy.slice().reverse().map((s) => (
-                <div key={s.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-all">
+              {[...sesionesHoy].reverse().map((s) => (
+                <div key={s.id_sesion || s.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-all">
                   <div className="flex items-center gap-4">
                     <div className="w-2 h-2 rounded-full" style={{backgroundColor: s.asignatura?.color || '#6366F1'}}></div>
                     <div>
@@ -161,7 +192,7 @@ const FocusModePage = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-6 text-sm">
-                    <span className="text-gray-400">{s.duracion || 0} min</span>
+                    <span className="text-gray-400">{s.duracion || s.duracion_minutos || 0} min</span>
                     <span className="text-gray-600 font-mono">
                       {s.fechaInicio ? new Date(s.fechaInicio).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
                     </span>
@@ -184,8 +215,8 @@ const FocusModePage = () => {
               <div className="flex justify-between items-center border-t border-white/5 pt-6">
                 <span className="text-gray-500 text-sm font-bold uppercase tracking-tighter">Tiempo Total</span>
                 <span className="text-2xl font-bold">
-                  {Math.floor(sesionesHoy.reduce((acc, s) => acc + (s.duracion || 0), 0) / 60)}h{' '}
-                  {sesionesHoy.reduce((acc, s) => acc + (s.duracion || 0), 0) % 60}m
+                  {Math.floor(sesionesHoy.reduce((acc, s) => acc + (s.duracion || s.duracion_minutos || 0), 0) / 60)}h{' '}
+                  {sesionesHoy.reduce((acc, s) => acc + (s.duracion || s.duracion_minutos || 0), 0) % 60}m
                 </span>
               </div>
             </div>

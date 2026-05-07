@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
@@ -43,6 +44,6 @@ public class Asignatura {
     private List<Recurso> recursos;
 
     @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
+    @JsonIgnoreProperties("asignatura")
     private List<MazoFlashcard> mazos;
 }
