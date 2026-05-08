@@ -46,4 +46,8 @@ public class Asignatura {
     @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnoreProperties("asignatura")
     private List<MazoFlashcard> mazos;
+
+    @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL)
+    @JsonIgnoreProperties("asignatura") // Evita que la sesión vuelva a cargar la asignatura
+    private List<SesionEstudio> sesiones;
 }

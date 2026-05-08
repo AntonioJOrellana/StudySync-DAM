@@ -1,12 +1,16 @@
 package com.studysync.repository;
 
-import java.util.List;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 import com.studysync.model.Asignatura;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import java.util.Optional; // Importación obligatoria
+import java.util.List;
 
-@Repository
 public interface AsignaturaRepository extends JpaRepository<Asignatura, Long> {
-    List<Asignatura> findByUsuario_Id(Long idUsuario);
-    // AQUÍ NO DEBE HABER NADA DE "obtenerPorId"
+
+    @Query("SELECT a FROM Asignatura a LEFT JOIN FETCH a.sesiones LEFT JOIN FETCH a.mazos WHERE a.id = :id")
+    Optional<Asignatura> findByIdConDetalles(@Param("id") Long id);
+
+    List<Asignatura> findByUsuario_Id(Long usuarioId);
 }

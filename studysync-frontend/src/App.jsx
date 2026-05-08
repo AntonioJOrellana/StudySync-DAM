@@ -35,7 +35,7 @@ const MainApp = () => {
   const [asignaturas, setAsignaturas] = useState([]); 
   const [asignaturaActual, setAsignaturaActual] = useState(null);
 
-  // Detecta si entramos por URL de mazo para marcar la pestaña correcta
+  // Sincronización de pestañas basada en la URL
   useEffect(() => {
     if (location.pathname.includes('/flashcards/mazo/')) {
       setActiveTab('Flashcards');
@@ -62,29 +62,30 @@ const MainApp = () => {
 
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
-    // Si cambiamos a cualquier pestaña que no sea Flashcards (o si clicamos Flashcards de nuevo)
-    // reseteamos la URL para que no se quede anclado el ID de un mazo previo.
+    // Limpiamos la URL al cambiar de sección manualmente para evitar conflictos
     if (location.pathname !== '/') {
       navigate('/');
     }
   };
 
   const renderContent = () => {
-    // Si la URL contiene la ruta de mazo, renderizamos FlashcardsPage dentro de un Route
-    // para que el hook useParams() en FlashcardsPage pueda capturar el ID.
-    if (location.pathname.includes('/flashcards/mazo/')) {
-      return (
-        <Routes>
-          <Route path="/flashcards/mazo/:idMazo" element={<FlashcardsPage asignaturasContext={asignaturas} />} />
-        </Routes>
-      );
-    }
+    // Definimos el componente de Flashcards una sola vez para usarlo en ambos casos
+    const FlashcardsComponent = <FlashcardsPage asignaturasContext={asignaturas} />;
 
     switch (activeTab) {
       case 'Inicio': 
         return <Dashboard user={user} onMateriaCreada={cargarMaterias} />;
+      
       case 'Flashcards': 
-        return <FlashcardsPage asignaturasContext={asignaturas} />;
+        // IMPORTANTE: Envolvemos siempre en Routes para que capture el :idMazo 
+        // sea cual sea la materia
+        return (
+          <Routes>
+            <Route path="/" element={FlashcardsComponent} />
+            <Route path="/flashcards/mazo/:idMazo" element={FlashcardsComponent} />
+          </Routes>
+        );
+
       case 'Modo Focus': 
         return <FocusModePage />;
       case 'Calendario': 

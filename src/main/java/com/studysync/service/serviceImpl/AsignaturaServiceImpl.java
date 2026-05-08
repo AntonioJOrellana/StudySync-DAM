@@ -6,7 +6,10 @@ import com.studysync.service.AsignaturaService;
 import com.studysync.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
+import java.util.Optional; // <--- ESTE IMPORT ES CRÍTICO
 
 @Service
 public class AsignaturaServiceImpl implements AsignaturaService {
@@ -15,8 +18,8 @@ public class AsignaturaServiceImpl implements AsignaturaService {
     private AsignaturaRepository asignaturaRepository;
 
     @Override
+    @Transactional
     public Asignatura crear(Asignatura asignatura) {
-        // Validación: No permitimos asignaturas sin nombre
         if (asignatura.getNombre() == null || asignatura.getNombre().trim().isEmpty()) {
             throw new RuntimeException("El nombre de la asignatura no puede estar vacío.");
         }
@@ -24,23 +27,22 @@ public class AsignaturaServiceImpl implements AsignaturaService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Asignatura> listarPorUsuario(Long usuarioId) {
-        // Retorna la lista (vacía o con datos) sin lanzar excepción para evitar errores
-        // en el Sidebar
         return asignaturaRepository.findByUsuario_Id(usuarioId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Asignatura obtenerPorId(Long id) {
-        // IMPORTANTE: Usamos findById, que es el método nativo de JpaRepository.
-        // Esto evita el error "No property obtenerPorId found"
-        return asignaturaRepository.findById(id)
+        // La sintaxis () -> new ... asegura que se trate como una Supplier de excepción
+        return asignaturaRepository.findByIdConDetalles(id)
                 .orElseThrow(() -> new ResourceNotFoundException("La asignatura con ID " + id + " no existe."));
     }
 
     @Override
+    @Transactional
     public void eliminar(Long id) {
-        // Verificamos existencia antes de borrar para lanzar un 404 limpio si no existe
         if (!asignaturaRepository.existsById(id)) {
             throw new ResourceNotFoundException("Error al eliminar: La asignatura con ID " + id + " no existe.");
         }

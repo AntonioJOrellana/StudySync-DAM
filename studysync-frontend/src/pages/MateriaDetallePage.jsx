@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom'; // Importante para la navegación
+import { useNavigate } from 'react-router-dom';
 import { 
   BookOpen, Plus, GraduationCap, Clock, 
   FileText, Video, ChevronRight, Flame, Link as LinkIcon, Monitor,
@@ -11,7 +11,7 @@ import { recursoService } from '../services/recursoService';
 import { mazoService } from '../services/mazoService';
 
 const MateriaDetallePage = ({ asignatura }) => {
-  const navigate = useNavigate(); // Hook para que funcionen los clicks en los mazos
+  const navigate = useNavigate();
   const [modalAbierto, setModalAbierto] = useState(false);
   const [recursos, setRecursos] = useState([]);
   const [mazos, setMazos] = useState([]);
@@ -24,27 +24,22 @@ const MateriaDetallePage = ({ asignatura }) => {
     
     setCargando(true);
     try {
-      // 1. Cargar Recursos y Mazos en paralelo con captura de errores individual
       const [dataRecursos, resMazos] = await Promise.allSettled([
         recursoService.getRecursosPorAsignatura(idAsig),
         mazoService.listarPorAsignatura(idAsig)
       ]);
       
-      // Procesar Recursos
       const listaRecursos = dataRecursos.status === 'fulfilled' ? dataRecursos.value : [];
       setRecursos(Array.isArray(listaRecursos) ? listaRecursos : []);
 
-      // Procesar Mazos (Aquí estaba el error 500, ahora si falla usamos el fallback)
       let listaMazos = [];
       if (resMazos.status === 'fulfilled' && resMazos.value?.data) {
         listaMazos = resMazos.value.data;
       } else {
-        // Fallback: Si la API falla, usamos los mazos que ya vengan en el objeto asignatura
         listaMazos = asignatura.mazos || [];
       }
       setMazos(listaMazos);
 
-      // 2. Cargar tarjetas falladas desde localStorage
       const fallidas = listaMazos.reduce((acc, mazo) => {
         const mazoId = mazo.id || mazo.id_mazo;
         const saved = localStorage.getItem(`fallidas_mazo_${mazoId}`);
@@ -69,18 +64,35 @@ const MateriaDetallePage = ({ asignatura }) => {
     cargarDatos();
   }, [cargarDatos]);
 
+  // --- LÓGICA DE ESTADÍSTICAS CORREGIDA ---
   const statsReales = useMemo(() => {
+    // 1. Conteo de Flashcards
     const totalFlashcards = mazos.reduce((acc, mazo) => {
-      const cantidad = mazo.flashcards?.length || mazo.cantidad_tarjetas || 0;
+      const cantidad = (mazo.flashcards && mazo.flashcards.length) || 
+                       mazo.cantidad_tarjetas || 0;
       return acc + cantidad;
     }, 0);
     
-    const horasVuelo = asignatura.horasTotales || (recursos.length * 0.5).toFixed(1); 
+    // 2. HORAS DE ESTUDIO (Cálculo basado en la lista de sesiones)
+    const listaSesiones = asignatura.sesiones || [];
+    
+    // Sumamos el campo 'duracion' de cada sesión (que configuramos en Java)
+    const minutosTotales = listaSesiones.reduce((acc, sesion) => {
+        const d = Number(sesion.duracion) || 0;
+        return acc + d;
+    }, 0);
+
+    const horasCalculadas = minutosTotales / 60;
+
+    // 3. Progreso
+    const progresoBase = recursos.length * 15;
+    const progresoActividad = mazos.length * 10;
+    const progresoTotal = Math.min(100, progresoBase + progresoActividad);
     
     return {
       totalFlashcards,
-      horasVuelo,
-      progreso: recursos.length > 0 ? Math.min(100, recursos.length * 20) : 0
+      horasVuelo: horasCalculadas.toFixed(1),
+      progreso: Math.round(progresoTotal)
     };
   }, [mazos, recursos, asignatura]);
 
@@ -133,17 +145,16 @@ const MateriaDetallePage = ({ asignatura }) => {
 
       {/* STATS REALES */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-        <StatCard label="Progreso Actual" value={`${statsReales.progreso}%`} sub="+real" color={materiaColor} />
-        <StatCard label="Flashcards Totales" value={`${statsReales.totalFlashcards}`} sub="En mazos" color={materiaColor} />
-        <StatCard label="Horas de Estudio" value={`${statsReales.horasVuelo}h`} sub="Focus" color={materiaColor} />
-        <StatCard label="Pendientes" value={fallidasRefuerzo.length} sub="Repaso" color="#ef4444" />
+        <StatCard label="Progreso Actual" value={`${statsReales.progreso}%`} sub="+REAL" color={materiaColor} />
+        <StatCard label="Flashcards Totales" value={`${statsReales.totalFlashcards}`} sub="EN MAZOS" color={materiaColor} />
+        <StatCard label="Horas de Estudio" value={`${statsReales.horasVuelo}h`} sub="FOCUS" color={materiaColor} />
+        <StatCard label="Pendientes" value={fallidasRefuerzo.length} sub="REPASO" color="#ef4444" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2 space-y-10">
           
           <section className="grid grid-cols-1 md:grid-cols-1 gap-6">
-            {/* Solo Catedrático, Status eliminado */}
             <InfoCard icon={<GraduationCap size={22} />} label="Catedrático" value={asignatura.profesor || "No asignado"} color={materiaColor} />
           </section>
 
@@ -179,8 +190,8 @@ const MateriaDetallePage = ({ asignatura }) => {
                   <FlashcardItem 
                     key={mazo.id || mazo.id_mazo} 
                     title={mazo.nombre} 
-                    count={`${mazo.flashcards?.length || mazo.cantidad_tarjetas || 0} tarjetas`} 
-                    progress={65} 
+                    count={`${(mazo.flashcards?.length) || mazo.cantidad_tarjetas || 0} tarjetas`} 
+                    progress={100} 
                     color={materiaColor} 
                     onClick={() => navigate(`/flashcards/mazo/${mazo.id || mazo.id_mazo}`)}
                   />
@@ -274,7 +285,7 @@ const MateriaDetallePage = ({ asignatura }) => {
   );
 };
 
-// --- COMPONENTES AUXILIARES ---
+// Componentes internos (StatCard, InfoCard, etc. se mantienen igual)
 const StatCard = ({ label, value, sub, color }) => (
   <div className="bg-[#111] border border-white/5 p-7 rounded-[32px] hover:border-white/10 transition-colors group">
     <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-4 group-hover:text-gray-400">{label}</p>
