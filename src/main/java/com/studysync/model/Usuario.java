@@ -1,13 +1,14 @@
 package com.studysync.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
 @Table(name = "usuario")
 @Data
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Usuario {
 
     @Id
@@ -26,14 +27,11 @@ public class Usuario {
     private String email;
 
     @Column(name = "modo_sin_cuenta")
-    private Integer modoSinCuenta;
+    private Integer modoSinCuenta = 0;
 
-    // Añadir a Usuario.java
     @Column(name = "url_avatar")
-    private String urlAvatar; // Para la foto de perfil
+    private String urlAvatar;
 
     @Column(name = "puntos_experiencia")
-    private Integer puntosExperiencia = 0; // Para el sistema de niveles/logros
-
-
+    private Integer puntosExperiencia = 0;
 }

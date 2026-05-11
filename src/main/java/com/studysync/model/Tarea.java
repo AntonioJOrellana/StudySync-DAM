@@ -2,10 +2,11 @@ package com.studysync.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 import java.time.LocalDate;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "tarea")
 @Data
@@ -14,7 +15,7 @@ public class Tarea {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_tarea")
-    private long id; // Integer para coincidir con INT
+    private long id;
 
     private String titulo;
     private String descripcion;
@@ -22,16 +23,15 @@ public class Tarea {
     @Column(name = "fecha_entrega")
     private LocalDate fechaEntrega;
 
-
-
-
-    @ManyToOne
-    @JoinColumn(name = "id_usuario", nullable = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_usuario")
+    @JsonIgnoreProperties({"password", "email", "username", "urlAvatar"}) 
     private Usuario usuario;
 
-    @ManyToOne
-    @JoinColumn(name = "id_asignatura", nullable = false)
-    @JsonBackReference
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_asignatura")
+    @JsonIgnoreProperties({"tareas", "recursos", "mazos", "sesiones", "usuario"})
+    @ToString.Exclude
     private Asignatura asignatura;
 
     @Enumerated(EnumType.STRING)
@@ -40,9 +40,5 @@ public class Tarea {
     @Column(nullable = false)
     private Boolean completada = false;
 
-    public enum Prioridad {
-        alta, media, baja
-    }
+    public enum Prioridad { alta, media, baja }
 }
-
-

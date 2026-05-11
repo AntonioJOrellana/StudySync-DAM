@@ -2,8 +2,11 @@ package com.studysync.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "agenda")
 @Data
@@ -21,18 +24,19 @@ public class Agenda {
     private LocalDateTime fechaEvento;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "ENUM('alta', 'media', 'baja')")
     private Prioridad prioridad = Prioridad.media;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_asignatura", nullable = false)
+    @JsonIgnoreProperties({"tareas", "recursos", "mazos", "sesiones", "usuario"})
+    @ToString.Exclude
     private Asignatura asignatura;
 
-    @ManyToOne
-    @JoinColumn(name = "id_usuario", nullable = false) // Esto crea la columna en la BD
-    private Usuario usuario; // <--- AÑADE ESTO
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_usuario", nullable = false)
+    // Cambiado: Permitimos el ID del usuario pero ignoramos sus listas pesadas
+    @JsonIgnoreProperties({"asignaturas", "password", "email", "rol"})
+    private Usuario usuario;
 
-    public enum Prioridad {
-        alta, media, baja
-    }
+    public enum Prioridad { alta, media, baja }
 }

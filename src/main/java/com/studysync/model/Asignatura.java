@@ -2,11 +2,11 @@ package com.studysync.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 import java.util.List;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "asignatura")
 @Data
@@ -29,25 +29,28 @@ public class Asignatura {
     @Column(columnDefinition = "TEXT")
     private String descripcion;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_usuario", nullable = false)
-    @JsonIgnore // Esto corta el bucle y permite que la lista de materias cargue
+    @JsonIgnoreProperties({"password", "email", "modoSinCuenta", "puntosExperiencia"})
     private Usuario usuario;
 
-    @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference // Mantenemos ignore aquí para no saturar el objeto asignatura
+    @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL)
+    @JsonIgnoreProperties("asignatura")
+    @ToString.Exclude
     private List<Tarea> tareas;
 
-    // RELACIÓN CORREGIDA: Ahora permite que los recursos viajen al frontend
-    @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference 
+    @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL)
+    @JsonIgnoreProperties("asignatura")
+    @ToString.Exclude
     private List<Recurso> recursos;
 
-    @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL)
     @JsonIgnoreProperties("asignatura")
+    @ToString.Exclude
     private List<MazoFlashcard> mazos;
 
     @OneToMany(mappedBy = "asignatura", cascade = CascadeType.ALL)
-    @JsonIgnoreProperties("asignatura") // Evita que la sesión vuelva a cargar la asignatura
+    @JsonIgnoreProperties("asignatura")
+    @ToString.Exclude
     private List<SesionEstudio> sesiones;
 }

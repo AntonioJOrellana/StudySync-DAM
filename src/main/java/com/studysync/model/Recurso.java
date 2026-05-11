@@ -2,9 +2,11 @@ package com.studysync.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 import java.time.LocalDateTime;
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "recurso")
 @Data
@@ -19,8 +21,6 @@ public class Recurso {
     private String nombre;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "ENUM('pdf', 'video', 'enlace', 'otro', 'pptx', 'docx')")
-    // ^ CORREGIDO: Ahora la base de datos acepta 'pptx' y 'docx'
     private TipoRecurso tipo;
 
     @Column(name = "url_acceso", nullable = false, columnDefinition = "TEXT")
@@ -32,14 +32,11 @@ public class Recurso {
     @Column(name = "fecha_subida", updatable = false)
     private LocalDateTime fechaSubida = LocalDateTime.now();
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_asignatura", nullable = false)
-    @JsonBackReference // Evita que el archivo intente cargar la asignatura en bucle
+    @JsonIgnoreProperties({"recursos", "mazos", "tareas", "sesiones", "usuario"})
+    @ToString.Exclude
     private Asignatura asignatura;
 
-    public enum TipoRecurso {
-        pdf, video, enlace, otro, pptx, docx
-    }
-
-    public String getUrl() { return urlAcceso; }
+    public enum TipoRecurso { pdf, video, enlace, otro, pptx, docx }
 }

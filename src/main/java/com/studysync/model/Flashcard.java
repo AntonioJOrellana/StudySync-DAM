@@ -1,10 +1,12 @@
 package com.studysync.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 import java.time.LocalDateTime;
 
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "flashcard")
 @Data
@@ -21,11 +23,9 @@ public class Flashcard {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String reverso;
 
-    // Empezamos en nivel 0 (nueva)
     @Column(name = "nivel_espaciado")
     private Integer nivelEspaciado = 0;
 
-    // Por defecto, disponible para repasar desde el segundo 1
     @Column(name = "proximo_repaso")
     private LocalDateTime proximoRepaso = LocalDateTime.now();
 
@@ -35,8 +35,9 @@ public class Flashcard {
     @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
-    @ManyToOne
-    @JoinColumn(name = "id_mazo", nullable = false)
-    @JsonBackReference // El mazo manda, la tarjeta obedece (evita el bucle)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_mazo")
+    @JsonIgnoreProperties("flashcards")
+    @ToString.Exclude
     private MazoFlashcard mazo;
 }

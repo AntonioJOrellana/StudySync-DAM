@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -23,8 +24,13 @@ public class SesionEstudioServiceImpl implements SesionEstudioService {
 
     @Override
     public SesionEstudio iniciarSesion(SesionEstudio sesion) {
+        // Si el frontend no manda fecha, la ponemos nosotros
         if (sesion.getFechaInicio() == null) {
             sesion.setFechaInicio(LocalDateTime.now());
+        }
+        // Forzamos el tipo si llega vacío
+        if (sesion.getTipo() == null) {
+            sesion.setTipo(SesionEstudio.TipoSesion.estudio);
         }
         return sesionRepository.save(sesion);
     }
@@ -33,8 +39,6 @@ public class SesionEstudioServiceImpl implements SesionEstudioService {
     public SesionEstudio finalizarSesion(Long id, Integer duracionMinutos) {
         SesionEstudio s = sesionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No existe la sesión con ID " + id));
-
-        // Usamos setDuracion (mapeado a duracion_minutos en tu modelo)
         s.setDuracion(duracionMinutos);
         return sesionRepository.save(s);
     }
@@ -46,62 +50,32 @@ public class SesionEstudioServiceImpl implements SesionEstudioService {
 
     @Override
     public ProgresoDTO obtenerProgresoUsuario(Long usuarioId) {
-        // 1. Cálculo de horas totales (evitando NullPointerException si no hay
-        // sesiones)
         Long minutosTotales = sesionRepository.sumTotalMinutosByUsuario(usuarioId);
         double horasTotales = (minutosTotales != null) ? minutosTotales / 60.0 : 0.0;
 
-        // 2. Actividad Semanal (Agrupada por día para evitar barras duplicadas)
         LocalDateTime limite = LocalDateTime.now().minusDays(7);
-        List<ProgresoDTO.ActividadDiaDTO> grafica = sesionRepository.findActividadUltimaSemana(usuarioId, limite)
-                .stream()
+        List<Object[]> resultadosSemana = sesionRepository.findActividadUltimaSemana(usuarioId, limite);
+        
+        List<ProgresoDTO.ActividadDiaDTO> grafica = (resultadosSemana == null) ? new ArrayList<>() : 
+            resultadosSemana.stream()
                 .map(obj -> {
-                    LocalDateTime fechaReferencia;
-
-                    // Manejamos los distintos tipos que puede devolver FUNCTION('DATE', ...)
-                    if (obj[0] instanceof Date) {
-                        fechaReferencia = ((Date) obj[0]).toLocalDate().atStartOfDay();
-                    } else if (obj[0] instanceof LocalDate) {
-                        fechaReferencia = ((LocalDate) obj[0]).atStartOfDay();
-                    } else if (obj[0] instanceof Timestamp) {
-                        fechaReferencia = ((Timestamp) obj[0]).toLocalDateTime();
-                    } else {
-                        // Fallback por si viene como LocalDateTime o String
-                        fechaReferencia = LocalDateTime.parse(obj[0].toString().replace(" ", "T").split("\\.")[0]);
-                    }
-
+                    LocalDateTime fechaRef = LocalDateTime.now();
+                    if (obj[0] instanceof Date) fechaRef = ((Date) obj[0]).toLocalDate().atStartOfDay();
+                    else if (obj[0] instanceof Timestamp) fechaRef = ((Timestamp) obj[0]).toLocalDateTime();
+                    
                     return new ProgresoDTO.ActividadDiaDTO(
-                            obtenerLetraDia(fechaReferencia),
+                            obtenerLetraDia(fechaRef),
                             ((Number) obj[1]).doubleValue() / 60.0);
                 })
                 .collect(Collectors.toList());
 
-        // 3. Progreso por Asignatura
-        List<ProgresoDTO.ProgresoAsignaturaDTO> materias = sesionRepository.findMinutosPorAsignatura(usuarioId)
-                .stream()
-                .map(obj -> new ProgresoDTO.ProgresoAsignaturaDTO(
-                        (String) obj[0],
-                        ((Number) obj[1]).doubleValue() / 60.0,
-                        "#6366f1")) // Color por defecto (puedes hacerlo dinámico luego)
-                .collect(Collectors.toList());
-
-        // 4. Construcción del DTO final
         return ProgresoDTO.builder()
                 .totalHorasEstudio(Math.round(horasTotales * 10.0) / 10.0)
-                .rachaDias(12) // Valor de ejemplo para el dashboard
-                .totalConceptos(142) // Valor de ejemplo
-                .promedioCalificaciones(8.7) // Valor de ejemplo
                 .actividadSemanal(grafica)
-                .progresoMaterias(materias)
                 .build();
     }
 
-    /**
-     * Convierte una fecha en la letra inicial del día de la semana.
-     */
     private String obtenerLetraDia(LocalDateTime fecha) {
-        // getValue() devuelve 1 (Lunes) a 7 (Domingo)
-        // Usamos un array donde el índice coincide con el valor del día
         String[] dias = { "", "L", "M", "X", "J", "V", "S", "D" };
         return dias[fecha.getDayOfWeek().getValue()];
     }

@@ -9,8 +9,9 @@ import java.util.List;
 
 public interface AsignaturaRepository extends JpaRepository<Asignatura, Long> {
 
-    @Query("SELECT a FROM Asignatura a LEFT JOIN FETCH a.sesiones LEFT JOIN FETCH a.mazos WHERE a.id = :id")
+    @Query("SELECT DISTINCT a FROM Asignatura a " +
+       "LEFT JOIN FETCH a.recursos " + 
+       "WHERE a.id = :id")
     Optional<Asignatura> findByIdConDetalles(@Param("id") Long id);
-
     List<Asignatura> findByUsuario_Id(Long usuarioId);
 }

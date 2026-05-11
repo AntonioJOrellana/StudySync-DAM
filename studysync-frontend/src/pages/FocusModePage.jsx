@@ -7,15 +7,14 @@ const FocusModePage = () => {
   const [segundos, setSegundos] = useState(25 * 60);
   const [activo, setActivo] = useState(false);
   const [idSesionActual, setIdSesionActual] = useState(null);
-  
   const [asignaturas, setAsignaturas] = useState([]);
   const [asigSeleccionada, setAsigSeleccionada] = useState(null);
   const [sesionesHoy, setSesionesHoy] = useState([]);
   
-  // Recuperamos usuario (ID 3 por defecto)
+  // Usuario desde localStorage o ID 3 por defecto
   const usuario = JSON.parse(localStorage.getItem('usuario')) || { id: 3, username: "antonio123" };
 
-  // --- CARGA INICIAL ---
+  // --- CARGA DE DATOS ---
   const fetchDatos = useCallback(async () => {
     try {
       const resAsig = await axios.get(`http://localhost:8080/api/asignaturas/usuario/${usuario.id}`);
@@ -25,15 +24,13 @@ const FocusModePage = () => {
       const resSesiones = await axios.get(`http://localhost:8080/api/sesiones/usuario/${usuario.id}`);
       setSesionesHoy(resSesiones.data);
     } catch (err) {
-      console.error("Error cargando datos iniciales:", err);
+      console.error("Error cargando datos:", err);
     }
   }, [usuario.id]);
 
-  useEffect(() => {
-    fetchDatos();
-  }, [fetchDatos]);
+  useEffect(() => { fetchDatos(); }, [fetchDatos]);
 
-  // --- LÓGICA TEMPORIZADOR ---
+  // --- LÓGICA DEL CRONÓMETRO ---
   useEffect(() => {
     let intervalo = null;
     if (activo && segundos > 0) {
@@ -44,30 +41,36 @@ const FocusModePage = () => {
     return () => clearInterval(intervalo);
   }, [activo, segundos]);
 
-  // --- FUNCIONES API CORREGIDAS ---
+  // --- ACCIONES API ---
   const iniciarSesion = async () => {
-    if (!asigSeleccionada) return alert("Selecciona una asignatura primero");
+    if (!asigSeleccionada) return alert("Selecciona una asignatura");
     
     try {
-      // CORRECCIÓN CLAVE: Enviamos objetos "planos" solo con el ID
-      // Esto evita que Jackson en el Backend intente serializar listas de Mazos/Flashcards
+      // AJUSTE DE HORA LOCAL PARA EVITAR DESFASE UTC
+      const ahora = new Date();
+      const offset = ahora.getTimezoneOffset() * 60000; // Offset en milisegundos
+      const horaLocal = new Date(ahora.getTime() - offset);
+      
       const payload = {
         usuario: { id: usuario.id },
         asignatura: { id: asigSeleccionada.id },
         tipo: 'estudio',
-        fechaInicio: new Date().toISOString()
+        // Enviamos la hora local formateada para el LocalDateTime de Java
+        fechaInicio: horaLocal.toISOString().split('.')[0] 
       };
 
       const res = await axios.post('http://localhost:8080/api/sesiones/iniciar', payload);
       
-      if (res.data && res.data.id_sesion || res.data.id) {
-        setIdSesionActual(res.data.id_sesion || res.data.id);
+      const idGenerado = res.data.id || res.data.id_sesion;
+
+      if (idGenerado) {
+        setIdSesionActual(idGenerado);
         setActivo(true);
-        console.log("Sesión iniciada correctamente");
+        console.log("Sesión iniciada ID:", idGenerado);
       }
     } catch (err) { 
-      console.error("Error al iniciar sesión (Backend):", err.response?.data || err.message);
-      alert("Error 500: El servidor no pudo procesar la asignatura. Revisa las relaciones en Java.");
+      console.error("Error al iniciar:", err);
+      alert("Error al iniciar sesión en el servidor. Revisa los logs de Java.");
     }
   };
 
@@ -78,23 +81,18 @@ const FocusModePage = () => {
       return;
     }
 
-    // Calculamos los minutos transcurridos (mínimo 1)
     const duracionReal = Math.max(1, Math.floor((25 * 60 - segundos) / 60));
 
     try {
       await axios.put(`http://localhost:8080/api/sesiones/finalizar/${idSesionActual}?duracion=${duracionReal}`);
-      
-      // Reset de estados
       setActivo(false);
       setSegundos(25 * 60);
       setIdSesionActual(null);
-      
-      // Refrescar lista de sesiones
-      const res = await axios.get(`http://localhost:8080/api/sesiones/usuario/${usuario.id}`);
-      setSesionesHoy(res.data);
+      fetchDatos(); 
     } catch (err) { 
-      console.error("Error al finalizar sesión:", err);
-      setActivo(false); // Forzamos parada aunque falle el registro
+      console.error("Error al finalizar:", err);
+      setActivo(false);
+      setSegundos(25 * 60);
     }
   };
 
@@ -105,17 +103,17 @@ const FocusModePage = () => {
       
       <header className="mb-10">
         <h1 className="text-4xl font-bold tracking-tight">Modo Focus</h1>
-        <p className="text-gray-500 text-sm mt-1">Mantén tu concentración con la técnica Pomodoro</p>
+        <p className="text-gray-500 text-sm mt-1">Concentración profunda con técnica Pomodoro</p>
       </header>
 
       <div className="grid grid-cols-12 gap-8">
         
-        {/* COLUMNA IZQUIERDA Y CENTRAL */}
+        {/* COLUMNA PRINCIPAL */}
         <div className="col-span-12 lg:col-span-8 space-y-8">
           
           <div className="bg-[#111111] border border-white/5 rounded-[40px] p-12 flex flex-col items-center relative overflow-hidden">
             <div className="absolute top-8 bg-indigo-500/10 text-indigo-400 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-              Sesión de Enfoque
+              Sesión Activa
             </div>
 
             {/* Selector de Asignatura */}
@@ -124,7 +122,7 @@ const FocusModePage = () => {
                 className="appearance-none bg-[#1A1A1A] text-gray-300 text-sm border border-white/10 rounded-full px-8 py-2 pr-12 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition-all hover:bg-[#222]"
                 value={asigSeleccionada?.id || ""}
                 onChange={(e) => setAsigSeleccionada(asignaturas.find(a => a.id === Number(e.target.value)))}
-                disabled={activo} // Bloqueamos cambio mientras estudia
+                disabled={activo}
               >
                 {asignaturas.length > 0 ? (
                   asignaturas.map(a => (
@@ -150,16 +148,16 @@ const FocusModePage = () => {
               </svg>
               <div className="absolute flex flex-col items-center">
                 <h2 className="text-[90px] font-medium tracking-tighter tabular-nums leading-none">{format(segundos)}</h2>
-                <span className="text-gray-500 text-[10px] font-black mt-2 uppercase tracking-widest">Minutos</span>
+                <span className="text-gray-500 text-[10px] font-black mt-2 uppercase tracking-widest">Segundos</span>
               </div>
             </div>
 
-            {/* Botones de Control */}
+            {/* Controles */}
             <div className="flex items-center gap-6">
               <button 
                 onClick={finalizarSesion} 
                 className="w-14 h-14 bg-[#1A1A1A] rounded-full flex items-center justify-center hover:bg-red-500/10 hover:text-red-500 transition-colors"
-                title="Detener y guardar"
+                title="Detener sesión"
               >
                 <Square size={20} fill="currentColor" />
               </button>
@@ -177,22 +175,22 @@ const FocusModePage = () => {
             </div>
           </div>
 
-          {/* Sesiones de Hoy */}
+          {/* Historial */}
           <div className="bg-[#111111] border border-white/5 rounded-[32px] p-8">
             <h3 className="text-xl font-bold mb-6">Sesiones de Hoy</h3>
             <div className="space-y-4">
-              {sesionesHoy.length === 0 && <p className="text-gray-600 italic text-sm">No hay sesiones hoy.</p>}
+              {sesionesHoy.length === 0 && <p className="text-gray-600 italic text-sm text-center py-4">Aún no has registrado sesiones hoy.</p>}
               {[...sesionesHoy].reverse().map((s) => (
-                <div key={s.id_sesion || s.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-all">
+                <div key={s.id || s.id_sesion} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-all">
                   <div className="flex items-center gap-4">
                     <div className="w-2 h-2 rounded-full" style={{backgroundColor: s.asignatura?.color || '#6366F1'}}></div>
                     <div>
-                      <span className="text-white font-medium block">{s.asignatura?.nombre || "General"}</span>
-                      <span className="text-gray-500 text-[10px] font-black tracking-widest uppercase">{s.tipo || 'estudio'}</span>
+                      <span className="text-white font-medium block">{s.asignatura?.nombre || "Estudio General"}</span>
+                      <span className="text-gray-500 text-[10px] font-black tracking-widest uppercase">{s.tipo?.replace('_', ' ') || 'estudio'}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-6 text-sm">
-                    <span className="text-gray-400">{s.duracion || s.duracion_minutos || 0} min</span>
+                    <span className="text-gray-400 font-medium">{s.duracion || s.duracion_minutos || 0} min</span>
                     <span className="text-gray-600 font-mono">
                       {s.fechaInicio ? new Date(s.fechaInicio).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
                     </span>
@@ -203,18 +201,18 @@ const FocusModePage = () => {
           </div>
         </div>
 
-        {/* COLUMNA DERECHA */}
+        {/* COLUMNA LATERAL */}
         <div className="col-span-12 lg:col-span-4 space-y-8">
           <div className="bg-[#111111] border border-white/5 rounded-[32px] p-8">
-            <h3 className="text-lg font-bold mb-6">Estadísticas</h3>
+            <h3 className="text-lg font-bold mb-6">Resumen Diario</h3>
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <span className="text-gray-500 text-sm font-bold uppercase tracking-tighter">Completadas</span>
+                <span className="text-gray-500 text-sm font-bold uppercase tracking-tighter">Sesiones</span>
                 <span className="text-3xl font-bold text-indigo-500">{sesionesHoy.length}</span>
               </div>
               <div className="flex justify-between items-center border-t border-white/5 pt-6">
-                <span className="text-gray-500 text-sm font-bold uppercase tracking-tighter">Tiempo Total</span>
-                <span className="text-2xl font-bold">
+                <span className="text-gray-500 text-sm font-bold uppercase tracking-tighter">Tiempo Focus</span>
+                <span className="text-2xl font-bold text-white">
                   {Math.floor(sesionesHoy.reduce((acc, s) => acc + (s.duracion || s.duracion_minutos || 0), 0) / 60)}h{' '}
                   {sesionesHoy.reduce((acc, s) => acc + (s.duracion || s.duracion_minutos || 0), 0) % 60}m
                 </span>
@@ -225,10 +223,10 @@ const FocusModePage = () => {
           <div className="bg-[#111111] border border-white/5 rounded-[32px] p-8 relative overflow-hidden group">
             <div className="flex items-center gap-2 text-yellow-500 mb-4">
               <Lightbulb size={20} />
-              <h3 className="font-black text-white uppercase text-[10px] tracking-widest">Consejo del día</h3>
+              <h3 className="font-black text-white uppercase text-[10px] tracking-widest">Consejo Focus</h3>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed italic relative z-10">
-              "Toma descansos de 5 minutos para mantener el cerebro fresco."
+              "La constancia vence a la inteligencia. ¡Cada minuto cuenta!"
             </p>
             <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-yellow-500/5 blur-2xl rounded-full"></div>
           </div>

@@ -2,11 +2,12 @@ package com.studysync.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 import java.util.List;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "mazo_flashcard")
 @Data
@@ -23,17 +24,19 @@ public class MazoFlashcard {
     @Column(columnDefinition = "TEXT")
     private String descripcion;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_usuario", nullable = false)
-    @JsonIgnore // No solemos necesitar los datos del usuario al ver mazos
+    @JsonIgnore 
     private Usuario usuario;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_asignatura", nullable = false)
-    @JsonIgnoreProperties({"mazos", "tareas", "recursos"}) // Evita bucle con Asignatura
+    @JsonIgnoreProperties({"mazos", "recursos", "tareas", "sesiones", "usuario"})
+    @ToString.Exclude
     private Asignatura asignatura;
 
     @OneToMany(mappedBy = "mazo", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference // Muestra las tarjetas cuando pides el mazo
+    @JsonIgnoreProperties("mazo")
+    @ToString.Exclude
     private List<Flashcard> flashcards;
 }
