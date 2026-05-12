@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Plus, ChevronLeft, ChevronRight, X, ChevronDown } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, X, Calendar as CalendarIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { asignaturaService } from '../services/asignaturaService';
 
@@ -12,43 +12,38 @@ const CalendarPage = () => {
   const [showModalCrear, setShowModalCrear] = useState(false);
   const [showModalDia, setShowModalDia] = useState(false);
   const [diaSeleccionado, setDiaSeleccionado] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const cargarDatos = useCallback(async () => {
     const userId = user?.id?.toString().split(':')[0];
     if (!userId) return;
 
     try {
-      const resAsig = await asignaturaService.listarPorUsuario(userId);
+      setLoading(true);
+      const [resAsig, resEventos] = await Promise.all([
+        asignaturaService.listarPorUsuario(userId),
+        axios.get(`http://localhost:8080/api/agenda/usuario/${userId}`)
+      ]);
       setAsignaturas(resAsig.data || []);
-
-      const resEventos = await axios.get(`http://localhost:8080/api/agenda/usuario/${userId}`);
       setEventos(resEventos.data || []);
     } catch (error) {
       console.error("Error en la carga:", error);
+    } finally {
+      setLoading(false);
     }
   }, [user]);
 
-  useEffect(() => {
-    cargarDatos();
-  }, [cargarDatos]);
+  useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
-  // --- LÓGICA DE FILTRADO PARA "PRÓXIMOS" ---
   const obtenerEventosProximos = () => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-
-    // Calculamos el domingo de la semana que viene
-    // diaSemana: 0 (dom), 1 (lun)... 6 (sab)
-    const diaSemanaActual = hoy.getDay();
-    const diasHastaDomingoProximo = (7 - diaSemanaActual) + 7; 
-    
-    const finProximaSemana = new Date(hoy);
-    finProximaSemana.setDate(hoy.getDate() + diasHastaDomingoProximo);
-    finProximaSemana.setHours(23, 59, 59, 999);
+    const finPeriodo = new Date(hoy);
+    finPeriodo.setDate(hoy.getDate() + 14); // Próximas 2 semanas
 
     return eventos.filter(ev => {
       const fechaEv = new Date(ev.fechaEvento);
-      return fechaEv >= hoy && fechaEv <= finProximaSemana;
+      return fechaEv >= hoy && fechaEv <= finPeriodo;
     }).sort((a, b) => new Date(a.fechaEvento) - new Date(b.fechaEvento));
   };
 
@@ -59,19 +54,25 @@ const CalendarPage = () => {
 
   const generarDias = () => {
     const celdas = [];
-    for (let i = 0; i < primerDia; i++) celdas.push(<div key={`empty-${i}`} className="h-32 border border-white/5" />);
+    // Espacios vacíos mes anterior
+    for (let i = 0; i < primerDia; i++) {
+      celdas.push(<div key={`empty-${i}`} className="h-24 sm:h-32 border border-white/5 bg-white/[0.01]" />);
+    }
+    // Días del mes
     for (let d = 1; d <= diasEnMes; d++) {
       const fStr = `${año}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const evs = eventos.filter(e => e.fechaEvento?.startsWith(fStr));
       const esHoy = new Date().toDateString() === new Date(año, mes, d).toDateString();
+      
       celdas.push(
         <div key={d} onClick={() => { setDiaSeleccionado({ fecha: fStr, dia: d, eventos: evs }); setShowModalDia(true); }}
-          className={`h-32 border border-white/5 p-3 cursor-pointer hover:bg-white/5 transition-all ${esHoy ? 'bg-indigo-600/10' : 'bg-[#111111]'}`}>
-          <span className={`text-sm font-bold ${esHoy ? 'text-indigo-400' : 'text-gray-600'}`}>{d}</span>
-          <div className="flex flex-col gap-1 mt-2">
-            {evs.map((ev, i) => (
-              <div key={i} className="h-1.5 w-full rounded-full" style={{ backgroundColor: ev.asignatura?.color || '#6366F1' }} />
+          className={`h-24 sm:h-32 border border-white/5 p-2 sm:p-3 cursor-pointer hover:bg-white/5 transition-all relative ${esHoy ? 'bg-indigo-600/5' : 'bg-[#111111]'}`}>
+          <span className={`text-xs sm:text-sm font-black ${esHoy ? 'text-indigo-400' : 'text-gray-600'}`}>{d}</span>
+          <div className="flex flex-wrap gap-1 mt-1 sm:mt-2">
+            {evs.slice(0, 4).map((ev, i) => (
+              <div key={i} className="h-1 sm:h-1.5 w-1 sm:w-full rounded-full" style={{ backgroundColor: ev.asignatura?.color || '#6366F1' }} />
             ))}
+            {evs.length > 4 && <div className="text-[8px] text-gray-500 font-bold">+{evs.length - 4}</div>}
           </div>
         </div>
       );
@@ -80,65 +81,75 @@ const CalendarPage = () => {
   };
 
   return (
-    <div className="h-full bg-[#0A0A0A] text-white p-10 overflow-y-auto font-sans">
-      <header className="flex justify-between items-center mb-10">
-        <h1 className="text-4xl font-bold capitalize">
-          {fechaActual.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
-        </h1>
-        <div className="flex gap-4">
+    <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto custom-scrollbar animate-in fade-in duration-500">
+      
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+        <div>
+          <h1 className="text-3xl sm:text-5xl font-black italic tracking-tighter uppercase leading-none">
+            {fechaActual.toLocaleString('es-ES', { month: 'long' })}
+            <span className="text-indigo-600 ml-2">{año}</span>
+          </h1>
+          <p className="text-gray-500 text-xs sm:text-sm mt-2 font-medium tracking-wide uppercase">GESTIÓN DE AGENDA</p>
+        </div>
+        
+        <div className="flex w-full md:w-auto gap-3">
           <div className="flex bg-[#111111] rounded-2xl border border-white/5 p-1">
-            <button onClick={() => setFechaActual(new Date(año, mes - 1))} className="p-2 hover:text-indigo-400 transition-colors"><ChevronLeft/></button>
-            <button onClick={() => setFechaActual(new Date(año, mes + 1))} className="p-2 hover:text-indigo-400 transition-colors"><ChevronRight/></button>
+            <button onClick={() => setFechaActual(new Date(año, mes - 1))} className="p-2 hover:text-indigo-400 transition-colors"><ChevronLeft size={20}/></button>
+            <button onClick={() => setFechaActual(new Date(año, mes + 1))} className="p-2 hover:text-indigo-400 transition-colors"><ChevronRight size={20}/></button>
           </div>
-          <button onClick={() => setShowModalCrear(true)} className="bg-indigo-600 px-6 py-3 rounded-2xl font-bold flex items-center gap-2">
-            <Plus size={18} /> Nuevo Evento
+          <button onClick={() => setShowModalCrear(true)} className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-700 px-6 py-3 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-indigo-600/20">
+            <Plus size={16} /> Nuevo
           </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-12 gap-8">
-        <div className="col-span-12 lg:col-span-9 bg-[#111111] border border-white/5 rounded-[40px] p-8">
-          <div className="grid grid-cols-7 mb-4 text-center text-[10px] font-black text-gray-600 uppercase">
-            {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => <div key={d}>{d}</div>)}
-          </div>
-          <div className="grid grid-cols-7 border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
-            {generarDias()}
+      <div className="grid grid-cols-12 gap-6 sm:gap-8">
+        {/* CALENDARIO */}
+        <div className="col-span-12 lg:col-span-9">
+          <div className="bg-[#111111] border border-white/5 rounded-[32px] sm:rounded-[40px] p-4 sm:p-8 overflow-hidden shadow-2xl">
+            <div className="grid grid-cols-7 mb-6 text-center text-[10px] font-black text-gray-700 uppercase tracking-[0.2em]">
+              {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => <div key={d}>{d}</div>)}
+            </div>
+            <div className="grid grid-cols-7 border border-white/5 rounded-2xl overflow-hidden">
+              {generarDias()}
+            </div>
           </div>
         </div>
 
-        <div className="col-span-12 lg:col-span-3 bg-[#111111] border border-white/5 rounded-[32px] p-8">
-          <h3 className="text-lg font-bold mb-2">Próximos</h3>
-          <p className="text-[10px] text-gray-500 font-bold uppercase mb-8 tracking-widest">Esta semana y la siguiente</p>
-          <div className="space-y-6">
-            {obtenerEventosProximos().length > 0 ? (
-              obtenerEventosProximos().map((ev, i) => (
-                <div key={i} className="flex gap-4 items-start">
-                  <div className="w-1 rounded-full h-10 mt-1" style={{ backgroundColor: ev.asignatura?.color || '#6366F1' }}></div>
-                  <div>
-                    <h4 className="text-sm font-bold leading-tight">{ev.titulo}</h4>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">
+        {/* BARRA LATERAL: PRÓXIMOS EVENTOS */}
+        <div className="col-span-12 lg:col-span-3 space-y-6">
+          <div className="bg-[#111111] border border-white/5 rounded-[32px] p-8">
+            <div className="flex items-center gap-2 mb-6">
+              <CalendarIcon size={18} className="text-indigo-500" />
+              <h3 className="text-sm font-black uppercase tracking-widest">Próximos</h3>
+            </div>
+            <div className="space-y-5">
+              {obtenerEventosProximos().length > 0 ? (
+                obtenerEventosProximos().map((ev, i) => (
+                  <div key={i} className="group relative pl-4 border-l-2 hover:border-white transition-all py-1" style={{ borderLeftColor: ev.asignatura?.color || '#6366F1' }}>
+                    <h4 className="text-xs font-black uppercase italic leading-tight group-hover:text-indigo-400 transition-colors">{ev.titulo}</h4>
+                    <p className="text-[10px] text-gray-600 font-bold uppercase mt-1">
                       {new Date(ev.fechaEvento).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                     </p>
                   </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-600 text-xs italic">No hay eventos a corto plazo.</p>
-            )}
+                ))
+              ) : (
+                <p className="text-gray-700 text-[10px] font-bold uppercase tracking-tighter italic">Sin eventos cercanos</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ... (Resto de los modales se mantienen igual que el código anterior) ... */}
+      {/* MODAL CREAR EVENTO */}
       {showModalCrear && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-md rounded-[40px] p-10 relative">
-            <button onClick={() => setShowModalCrear(false)} className="absolute top-8 right-8 text-gray-500 hover:text-white"><X /></button>
-            <h2 className="text-2xl font-bold mb-8">Nuevo Evento</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in zoom-in duration-300">
+          <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-md rounded-[40px] p-8 sm:p-10 relative shadow-2xl">
+            <button onClick={() => setShowModalCrear(false)} className="absolute top-8 right-8 text-gray-600 hover:text-white transition-colors"><X size={20}/></button>
+            <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-8">Nuevo Evento</h2>
             <form className="space-y-6" onSubmit={async (e) => {
               e.preventDefault();
               const userId = user?.id?.toString().split(':')[0];
-              if (!userId) return;
               try {
                 const fechaISO = `${e.target.fecha.value}T10:00:00`;
                 await axios.post('http://localhost:8080/api/agenda/crear', {
@@ -150,46 +161,58 @@ const CalendarPage = () => {
                 });
                 setShowModalCrear(false);
                 cargarDatos();
-              } catch (err) {
-                alert("Error al guardar");
-              }
+              } catch (err) { alert("Error al guardar"); }
             }}>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-600">Título</label>
-                <input name="titulo" required className="w-full bg-[#111111] border border-white/5 rounded-2xl p-4 text-white outline-none" />
+                <label className="text-[10px] font-black uppercase text-gray-600 tracking-widest ml-1">¿Qué hay que hacer?</label>
+                <input name="titulo" required placeholder="Ej: Examen Parcial" className="w-full bg-[#111111] border border-white/5 rounded-2xl p-4 text-sm text-white outline-none focus:border-indigo-500/50 transition-colors" />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-600">Fecha</label>
-                <input name="fecha" type="date" required className="w-full bg-[#111111] border border-white/5 rounded-2xl p-4 text-white [color-scheme:dark]" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-gray-600 tracking-widest ml-1">Fecha</label>
+                  <input name="fecha" type="date" required className="w-full bg-[#111111] border border-white/5 rounded-2xl p-4 text-xs text-white [color-scheme:dark] outline-none" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-gray-600 tracking-widest ml-1">Materia</label>
+                  <select name="asig" required className="w-full bg-[#111111] border border-white/5 rounded-2xl p-4 text-xs text-white outline-none appearance-none">
+                    <option value="">Elegir...</option>
+                    {asignaturas.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+                  </select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-600">Materia</label>
-                <select name="asig" required className="w-full bg-[#111111] border border-white/5 rounded-2xl p-4 text-white outline-none">
-                  <option value="">Selecciona materia...</option>
-                  {asignaturas.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-                </select>
-              </div>
-              <button type="submit" className="w-full bg-indigo-600 py-4 rounded-2xl font-bold mt-4">Confirmar</button>
+              <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 py-4 rounded-2xl font-black uppercase tracking-widest text-xs mt-4 transition-all active:scale-95 shadow-lg shadow-indigo-600/20">
+                Añadir a la Agenda
+              </button>
             </form>
           </div>
         </div>
       )}
 
+      {/* MODAL DETALLE DÍA */}
       {showModalDia && diaSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-md rounded-[40px] p-10 relative">
-            <button onClick={() => setShowModalDia(false)} className="absolute top-8 right-8 text-gray-500 hover:text-white"><X /></button>
-            <h2 className="text-2xl font-bold mb-6 text-indigo-400">Día {diaSeleccionado.dia}</h2>
-            <div className="space-y-4 max-h-[350px] overflow-y-auto">
-              {diaSeleccionado.eventos.map((ev, i) => (
-                <div key={i} className="bg-[#111111] p-5 rounded-3xl border border-white/5 flex gap-5 items-center">
-                  <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: ev.asignatura?.color }}></div>
-                  <div>
-                    <p className="font-bold text-lg">{ev.titulo}</p>
-                    <p className="text-xs text-gray-500 uppercase font-bold">{ev.asignatura?.nombre}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in zoom-in duration-300">
+          <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-md rounded-[40px] p-8 sm:p-10 relative">
+            <button onClick={() => setShowModalDia(false)} className="absolute top-8 right-8 text-gray-600 hover:text-white transition-colors"><X size={20}/></button>
+            <div className="mb-8">
+              <span className="text-indigo-500 text-[10px] font-black uppercase tracking-[0.3em]">Agenda del día</span>
+              <h2 className="text-4xl font-black italic uppercase tracking-tighter mt-1">{diaSeleccionado.dia}</h2>
+            </div>
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {diaSeleccionado.eventos.length > 0 ? (
+                diaSeleccionado.eventos.map((ev, i) => (
+                  <div key={i} className="bg-[#111111] p-5 rounded-3xl border border-white/5 flex gap-5 items-center group hover:border-indigo-500/30 transition-all">
+                    <div className="w-1.5 h-10 rounded-full shrink-0" style={{ backgroundColor: ev.asignatura?.color }}></div>
+                    <div>
+                      <p className="font-black uppercase italic text-sm group-hover:text-indigo-400 transition-colors leading-tight">{ev.titulo}</p>
+                      <p className="text-[10px] text-gray-600 uppercase font-black mt-1 tracking-widest">{ev.asignatura?.nombre}</p>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-10">
+                  <p className="text-gray-700 text-xs font-bold uppercase italic italic">Día libre de tareas</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>

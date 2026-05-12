@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   BookOpen, Plus, GraduationCap, Clock, 
   FileText, Video, ChevronRight, Flame, Link as LinkIcon, Monitor,
-  AlertCircle, Layers
+  AlertCircle, Layers, Activity
 } from 'lucide-react';
 
 import ModalNuevoRecurso from '../components/ModalNuevoRecurso';
@@ -64,27 +64,17 @@ const MateriaDetallePage = ({ asignatura }) => {
     cargarDatos();
   }, [cargarDatos]);
 
-  // --- LÓGICA DE ESTADÍSTICAS CORREGIDA ---
   const statsReales = useMemo(() => {
-    // 1. Conteo de Flashcards
     const totalFlashcards = mazos.reduce((acc, mazo) => {
       const cantidad = (mazo.flashcards && mazo.flashcards.length) || 
                        mazo.cantidad_tarjetas || 0;
       return acc + cantidad;
     }, 0);
     
-    // 2. HORAS DE ESTUDIO (Cálculo basado en la lista de sesiones)
     const listaSesiones = asignatura.sesiones || [];
-    
-    // Sumamos el campo 'duracion' de cada sesión (que configuramos en Java)
-    const minutosTotales = listaSesiones.reduce((acc, sesion) => {
-        const d = Number(sesion.duracion) || 0;
-        return acc + d;
-    }, 0);
-
+    const minutosTotales = listaSesiones.reduce((acc, sesion) => acc + (Number(sesion.duracion) || 0), 0);
     const horasCalculadas = minutosTotales / 60;
 
-    // 3. Progreso
     const progresoBase = recursos.length * 15;
     const progresoActividad = mazos.length * 10;
     const progresoTotal = Math.min(100, progresoBase + progresoActividad);
@@ -98,8 +88,9 @@ const MateriaDetallePage = ({ asignatura }) => {
 
   if (!asignatura) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-500 font-medium italic">
-        Selecciona una asignatura para visualizar el panel.
+      <div className="flex flex-col items-center justify-center h-full text-gray-600 gap-4">
+        <Activity size={48} className="opacity-20 animate-pulse" />
+        <p className="font-bold uppercase tracking-widest text-xs italic">Selecciona una materia para auditar</p>
       </div>
     );
   }
@@ -108,72 +99,74 @@ const MateriaDetallePage = ({ asignatura }) => {
   const colorConOpacidad = (hex, opacity) => `${hex}${opacity}`;
 
   return (
-    <div className="h-full bg-[#0A0A0A] text-white overflow-y-auto custom-scrollbar p-10 animate-in fade-in duration-500">
+    <div className="h-full bg-[#0A0A0A] text-white overflow-y-auto custom-scrollbar p-6 sm:p-10 animate-in fade-in duration-500">
       
-      {/* HEADER */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+      {/* HEADER DINÁMICO */}
+      <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-8 mb-12">
         <div className="flex items-center gap-6">
           <div 
-            className="p-5 rounded-[24px] shadow-2xl transition-transform hover:scale-105"
+            className="hidden sm:flex p-6 rounded-[32px] shadow-2xl transition-transform hover:rotate-3"
             style={{ 
-              backgroundColor: colorConOpacidad(materiaColor, '15'), 
+              backgroundColor: colorConOpacidad(materiaColor, '10'), 
               color: materiaColor,
-              border: `1px solid ${colorConOpacidad(materiaColor, '30')}`
+              border: `1px solid ${colorConOpacidad(materiaColor, '20')}`
             }}
           >
-            <BookOpen size={38} />
+            <BookOpen size={42} />
           </div>
           <div>
-            <h1 className="text-5xl font-black tracking-tighter mb-2 italic uppercase">
+            <div className="flex items-center gap-3 mb-2">
+                <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter" style={{ backgroundColor: colorConOpacidad(materiaColor, '20'), color: materiaColor }}>Asignatura Activa</span>
+                {cargando && <div className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />}
+            </div>
+            <h1 className="text-4xl sm:text-6xl font-black tracking-tighter italic uppercase leading-none">
               {asignatura.nombre}
             </h1>
-            <p className="text-gray-500 font-medium text-lg">
-              {asignatura.descripcion || "Sin descripción disponible."}
+            <p className="text-gray-500 font-bold mt-3 text-sm sm:text-lg max-w-2xl">
+              {asignatura.descripcion || "Módulo de estudio sin descripción técnica."}
             </p>
           </div>
         </div>
 
         <button 
           onClick={() => setModalAbierto(true)}
-          className="flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-sm transition-all hover:scale-105 active:scale-95 shadow-xl shadow-black/40"
+          className="flex items-center justify-center gap-3 px-8 py-5 rounded-2xl font-black uppercase text-xs tracking-widest transition-all hover:brightness-110 active:scale-95 shadow-2xl"
           style={{ backgroundColor: materiaColor, color: '#fff' }}
         >
-          <Plus size={20} />
-          Nuevo Recurso
+          <Plus size={18} /> Nuevo Recurso
         </button>
       </header>
 
-      {/* STATS REALES */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-        <StatCard label="Progreso Actual" value={`${statsReales.progreso}%`} sub="+REAL" color={materiaColor} />
-        <StatCard label="Flashcards Totales" value={`${statsReales.totalFlashcards}`} sub="EN MAZOS" color={materiaColor} />
-        <StatCard label="Horas de Estudio" value={`${statsReales.horasVuelo}h`} sub="FOCUS" color={materiaColor} />
-        <StatCard label="Pendientes" value={fallidasRefuerzo.length} sub="REPASO" color="#ef4444" />
+      {/* MÉTRICAS DE RENDIMIENTO */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-12">
+        <StatCard label="Nivel de Avance" value={`${statsReales.progreso}%`} sub="TOTAL" color={materiaColor} />
+        <StatCard label="Base de Datos" value={`${statsReales.totalFlashcards}`} sub="CARDS" color={materiaColor} />
+        <StatCard label="Tiempo Focus" value={`${statsReales.horasVuelo}h`} sub="LOG" color={materiaColor} />
+        <StatCard label="Críticos" value={fallidasRefuerzo.length} sub="REPASO" color="#ef4444" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        <div className="lg:col-span-2 space-y-10">
+        <div className="lg:col-span-2 space-y-12">
           
-          <section className="grid grid-cols-1 md:grid-cols-1 gap-6">
-            <InfoCard icon={<GraduationCap size={22} />} label="Catedrático" value={asignatura.profesor || "No asignado"} color={materiaColor} />
-          </section>
+          {/* SECCIÓN DE DATOS DEL PROFESOR */}
+          <InfoCard icon={<GraduationCap size={22} />} label="Catedrático / Instructor" value={asignatura.profesor || "Personal Docente No Asignado"} color={materiaColor} />
 
-          {/* TARJETAS PENDIENTES DE REFUERZO */}
+          {/* PENDIENTES DE REFUERZO (Solo si hay errores) */}
           {fallidasRefuerzo.length > 0 && (
-            <section className="animate-in slide-in-from-top-4 duration-500">
-              <div className="flex items-center gap-3 mb-6 text-red-500">
-                <AlertCircle size={20} />
-                <h3 className="text-xl font-bold italic uppercase tracking-wider">Pendientes de Refuerzo ({fallidasRefuerzo.length})</h3>
+            <section className="animate-in slide-in-from-right-4 duration-500">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-6 w-1 bg-red-500 rounded-full" />
+                <h3 className="text-xl font-black italic uppercase tracking-wider text-red-500">Zona de Refuerzo Crítico</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {fallidasRefuerzo.slice(0, 4).map((f, idx) => (
-                  <div key={idx} className="bg-red-500/5 border border-red-500/10 p-5 rounded-2xl group hover:bg-red-500/10 transition-colors">
-                    <div className="flex justify-between items-start mb-2">
-                        <p className="text-sm font-bold italic text-white">¿{f.anverso || f.pregunta}?</p>
-                        <span className="text-[8px] font-black bg-red-500/20 px-2 py-0.5 rounded text-red-400 uppercase tracking-tighter">{f.nombreMazo}</span>
+                  <div key={idx} className="bg-[#111] border border-red-500/10 p-6 rounded-[24px] hover:border-red-500/30 transition-all group">
+                    <div className="flex justify-between items-start mb-3">
+                        <p className="text-xs font-black italic text-gray-200 leading-tight">¿{f.anverso || f.pregunta}?</p>
+                        <span className="text-[8px] font-black bg-red-500/10 px-2 py-1 rounded text-red-500 uppercase">{f.nombreMazo}</span>
                     </div>
-                    <p className="text-xs text-gray-400 leading-relaxed border-t border-red-500/10 pt-2 mt-2">
-                        <span className="text-red-500/50 font-black mr-1 underline">R:</span> {f.reverso || f.respuesta}
+                    <p className="text-[11px] text-gray-500 leading-relaxed border-t border-white/5 pt-3 mt-3 italic">
+                        <span className="text-red-500 font-black mr-2">FIX:</span> {f.reverso || f.respuesta}
                     </p>
                   </div>
                 ))}
@@ -183,22 +176,26 @@ const MateriaDetallePage = ({ asignatura }) => {
 
           {/* LISTADO DE MAZOS */}
           <section>
-            <h3 className="text-xl font-bold mb-6 italic uppercase tracking-wider">Mazos de la Asignatura</h3>
+            <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black italic uppercase tracking-wider">Mazos de Aprendizaje</h3>
+                <span className="text-[10px] font-bold text-gray-600 bg-white/5 px-3 py-1 rounded-full uppercase tracking-widest">{mazos.length} Unidades</span>
+            </div>
             <div className="space-y-4">
               {mazos.length > 0 ? (
                 mazos.map((mazo) => (
                   <FlashcardItem 
                     key={mazo.id || mazo.id_mazo} 
                     title={mazo.nombre} 
-                    count={`${(mazo.flashcards?.length) || mazo.cantidad_tarjetas || 0} tarjetas`} 
+                    count={`${(mazo.flashcards?.length) || mazo.cantidad_tarjetas || 0} tarjetas activas`} 
                     progress={100} 
                     color={materiaColor} 
                     onClick={() => navigate(`/flashcards/mazo/${mazo.id || mazo.id_mazo}`)}
                   />
                 ))
               ) : (
-                <div className="p-10 bg-[#111] border border-white/5 rounded-[32px] text-center text-gray-600 italic">
-                  No hay mazos creados para esta materia.
+                <div className="p-12 bg-[#111] border border-white/5 rounded-[40px] text-center">
+                  <Layers size={32} className="mx-auto mb-4 text-gray-800" />
+                  <p className="text-gray-600 text-xs font-bold uppercase tracking-widest italic">No se han detectado mazos vinculados</p>
                 </div>
               )}
             </div>
@@ -206,8 +203,8 @@ const MateriaDetallePage = ({ asignatura }) => {
 
           {/* BIBLIOTECA */}
           <section>
-            <h3 className="text-xl font-bold mb-6 italic uppercase tracking-wider">Biblioteca de Recursos</h3>
-            <div className="bg-[#111] border border-white/5 rounded-[32px] overflow-hidden">
+            <h3 className="text-xl font-black italic uppercase tracking-wider mb-8">Repositorio de Recursos</h3>
+            <div className="bg-[#111] border border-white/5 rounded-[32px] overflow-hidden shadow-2xl">
               {recursos.length > 0 ? (
                 recursos.map((recurso, index) => (
                   <ResourceItem 
@@ -219,34 +216,40 @@ const MateriaDetallePage = ({ asignatura }) => {
                   />
                 ))
               ) : (
-                <div className="p-10 text-center text-gray-600 italic">No hay archivos subidos.</div>
+                <div className="p-12 text-center">
+                   <p className="text-gray-700 text-xs font-bold uppercase tracking-widest italic">Repositorio vacío</p>
+                </div>
               )}
             </div>
           </section>
         </div>
 
-        {/* SIDEBAR */}
+        {/* SIDEBAR ANALÍTICO */}
         <div className="space-y-8">
-          <div className="bg-[#111] border border-white/5 rounded-[32px] p-8">
-            <h4 className="font-bold mb-6 text-lg italic uppercase">Análisis de Datos</h4>
-            <div className="space-y-6">
+          <div className="bg-[#111] border border-white/5 rounded-[32px] p-8 shadow-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                <Activity size={80} />
+            </div>
+            <h4 className="font-black mb-8 text-sm uppercase tracking-[0.2em] text-gray-400">Data Analytics</h4>
+            <div className="space-y-8">
               <div className="flex gap-4">
-                <div className="w-1 rounded-full" style={{ backgroundColor: materiaColor }} />
+                <div className="w-1 rounded-full animate-pulse" style={{ backgroundColor: materiaColor }} />
                 <div>
-                  <p className="text-sm font-bold text-white uppercase tracking-tighter">Retención</p>
-                  <p className="text-xs text-gray-500 italic">Basado en tus últimos repasos.</p>
+                  <p className="text-[10px] font-black text-white uppercase tracking-widest">Índice de Retención</p>
+                  <p className="text-[10px] text-gray-500 italic mt-1 font-bold">Algoritmo StudySync v.3</p>
                 </div>
               </div>
-              <div className="pt-4 border-t border-white/5">
-                <div className="flex justify-between text-[10px] font-black uppercase mb-2">
-                  <span>Meta Semanal</span>
-                  <span>{recursos.length}/10 docs</span>
+              
+              <div className="pt-6 border-t border-white/5">
+                <div className="flex justify-between text-[10px] font-black uppercase mb-3 tracking-tighter">
+                  <span className="text-gray-500">Objetivo Mensual</span>
+                  <span className="text-white">{recursos.length} / 12 archivos</span>
                 </div>
-                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
                   <div 
-                    className="h-full transition-all duration-1000" 
+                    className="h-full transition-all duration-1000 ease-out" 
                     style={{ 
-                        width: `${Math.min(100, (recursos.length / 10) * 100)}%`, 
+                        width: `${Math.min(100, (recursos.length / 12) * 100)}%`, 
                         backgroundColor: materiaColor 
                     }} 
                   />
@@ -255,21 +258,22 @@ const MateriaDetallePage = ({ asignatura }) => {
             </div>
           </div>
 
+          {/* IA INSIGHT CARD */}
           <div 
-            className="p-8 rounded-[32px] border transition-all hover:bg-opacity-20 cursor-pointer group"
+            className="p-8 rounded-[32px] border transition-all hover:scale-[1.02] cursor-pointer group"
             style={{ 
               backgroundColor: colorConOpacidad(materiaColor, '05'),
               borderColor: colorConOpacidad(materiaColor, '10') 
             }}
           >
-            <div className="flex items-center gap-3 mb-4" style={{ color: materiaColor }}>
-              <Flame size={20} fill="currentColor" className="group-hover:animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-widest">IA Insight</span>
+            <div className="flex items-center gap-3 mb-5" style={{ color: materiaColor }}>
+              <Flame size={22} fill="currentColor" className="group-hover:animate-bounce" />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em]">IA Engine Insight</span>
             </div>
-            <p className="text-sm text-gray-400 leading-relaxed italic">
+            <p className="text-xs sm:text-sm text-gray-400 leading-relaxed italic font-medium">
               {recursos.length > 0 
-                ? `He procesado ${recursos.length} fuentes reales. Tu retención en este tema es del 78%.`
-                : "Sincroniza recursos para activar el análisis de la IA."}
+                ? `Análisis completado: Se han detectado patrones de estudio en ${recursos.length} fuentes. Sugerencia: Repasar conceptos de la unidad 2.`
+                : "Añade recursos para que la IA pueda generar un mapa de calor sobre tu aprendizaje."}
             </p>
           </div>
         </div>
@@ -285,23 +289,23 @@ const MateriaDetallePage = ({ asignatura }) => {
   );
 };
 
-// Componentes internos (StatCard, InfoCard, etc. se mantienen igual)
+// COMPONENTES DE SOPORTE CON ESTILO MEJORADO
 const StatCard = ({ label, value, sub, color }) => (
-  <div className="bg-[#111] border border-white/5 p-7 rounded-[32px] hover:border-white/10 transition-colors group">
-    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-4 group-hover:text-gray-400">{label}</p>
+  <div className="bg-[#111111] border border-white/5 p-6 sm:p-8 rounded-[32px] hover:border-white/20 transition-all group shadow-xl">
+    <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.2em] mb-4 group-hover:text-gray-400 transition-colors">{label}</p>
     <div className="flex items-baseline justify-between">
-      <h4 className="text-3xl font-black italic tracking-tighter">{value}</h4>
-      <span className="text-[9px] px-2 py-1 rounded-lg font-bold uppercase tracking-tighter" style={{ backgroundColor: `${color}15`, color: color }}>{sub}</span>
+      <h4 className="text-2xl sm:text-4xl font-black italic tracking-tighter">{value}</h4>
+      <span className="text-[8px] px-2 py-1 rounded-lg font-black uppercase tracking-tighter" style={{ backgroundColor: `${color}15`, color: color }}>{sub}</span>
     </div>
   </div>
 );
 
 const InfoCard = ({ icon, label, value, color }) => (
-  <div className="bg-[#111] p-6 rounded-[24px] border border-white/5 flex items-center gap-4 hover:bg-white/[0.01] transition-colors w-full">
-    <div className="p-3 rounded-xl" style={{ backgroundColor: `${color}15`, color: color }}>{icon}</div>
+  <div className="bg-[#111111] p-6 rounded-[28px] border border-white/5 flex items-center gap-5 hover:bg-white/[0.02] transition-all w-full shadow-lg group">
+    <div className="p-4 rounded-2xl group-hover:scale-110 transition-transform shadow-inner" style={{ backgroundColor: `${color}10`, color: color }}>{icon}</div>
     <div>
-      <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{label}</p>
-      <p className="text-white font-bold italic uppercase text-sm">{value}</p>
+      <p className="text-[9px] text-gray-600 uppercase font-black tracking-[0.2em] mb-0.5">{label}</p>
+      <p className="text-white font-black italic uppercase text-sm sm:text-base tracking-tight">{value}</p>
     </div>
   </div>
 );
@@ -309,42 +313,44 @@ const InfoCard = ({ icon, label, value, color }) => (
 const FlashcardItem = ({ title, count, progress, color, onClick }) => (
   <div 
     onClick={onClick}
-    className="bg-[#111] border border-white/5 p-6 rounded-[24px] flex items-center justify-between group cursor-pointer hover:bg-white/[0.02] transition-all"
+    className="bg-[#111111] border border-white/5 p-6 rounded-[28px] flex items-center justify-between group cursor-pointer hover:bg-white/[0.03] hover:translate-x-2 transition-all shadow-lg"
   >
-    <div className="flex items-center gap-4">
-      <div className="p-2 bg-white/5 rounded-lg text-gray-500 group-hover:text-white transition-colors">
-        <Layers size={18} />
+    <div className="flex items-center gap-5">
+      <div className="p-3 bg-white/5 rounded-xl text-gray-500 group-hover:text-white transition-all shadow-inner">
+        <Layers size={20} />
       </div>
       <div>
-        <p className="font-bold text-white mb-0.5 uppercase tracking-tight text-sm italic">{title}</p>
-        <p className="text-[10px] text-gray-600 font-bold uppercase">{count}</p>
+        <p className="font-black text-white mb-1 uppercase tracking-tight text-sm italic group-hover:text-indigo-400 transition-colors">{title}</p>
+        <p className="text-[9px] text-gray-600 font-black uppercase tracking-widest">{count}</p>
       </div>
     </div>
-    <div className="flex items-center gap-6">
-      <div className="w-24 h-1 bg-white/5 rounded-full overflow-hidden hidden md:block">
-        <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${progress}%`, backgroundColor: color }} />
+    <div className="flex items-center gap-8">
+      <div className="w-32 h-1 bg-white/5 rounded-full overflow-hidden hidden md:block">
+        <div className="h-full rounded-full transition-all duration-1000 ease-in-out" style={{ width: `${progress}%`, backgroundColor: color }} />
       </div>
-      <ChevronRight size={16} className="text-gray-700 group-hover:text-white transition-colors" />
+      <ChevronRight size={18} className="text-gray-800 group-hover:text-white group-hover:translate-x-1 transition-all" />
     </div>
   </div>
 );
 
 const ResourceItem = ({ icon, name, type, isLast }) => (
-  <div className={`p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group ${!isLast ? 'border-b border-white/5' : ''}`}>
-    <div className="flex items-center gap-4">
-      <div className="text-gray-500 group-hover:text-indigo-400 transition-colors">{icon}</div>
-      <span className="text-sm font-bold text-gray-400 group-hover:text-gray-200 transition-colors">{name}</span>
+  <div className={`p-6 flex items-center justify-between hover:bg-white/[0.03] transition-all cursor-pointer group ${!isLast ? 'border-b border-white/5' : ''}`}>
+    <div className="flex items-center gap-5">
+      <div className="text-gray-600 group-hover:text-indigo-400 group-hover:scale-110 transition-all">{icon}</div>
+      <span className="text-xs sm:text-sm font-bold text-gray-500 group-hover:text-gray-200 transition-colors">{name}</span>
     </div>
-    <span className="text-[9px] font-black text-gray-600 tracking-[0.2em] uppercase">{type}</span>
+    <div className="flex items-center gap-4">
+        <span className="text-[8px] font-black text-gray-700 tracking-[0.3em] uppercase bg-white/5 px-2 py-1 rounded group-hover:text-indigo-500 transition-colors">{type}</span>
+    </div>
   </div>
 );
 
 const getIconoRecurso = (tipo) => {
   const t = tipo?.toLowerCase();
-  if (t?.includes('pdf')) return <FileText size={18} />;
-  if (t?.includes('video')) return <Video size={18} />;
-  if (t?.includes('url') || t?.includes('enlace')) return <LinkIcon size={18} />;
-  return <Monitor size={18} />;
+  if (t?.includes('pdf')) return <FileText size={20} />;
+  if (t?.includes('video')) return <Video size={20} />;
+  if (t?.includes('url') || t?.includes('enlace')) return <LinkIcon size={20} />;
+  return <Monitor size={20} />;
 };
 
 export default MateriaDetallePage;

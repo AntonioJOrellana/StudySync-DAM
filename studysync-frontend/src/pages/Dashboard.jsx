@@ -1,277 +1,229 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Zap, Flame, BookOpen, Clock, ChevronRight, Sparkles, Plus, X } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Search, Zap, Flame, BookOpen, Clock, Plus, 
+  Sparkles, Pause, Play, Save, Calendar, FileUp, ChevronRight
+} from 'lucide-react';
 import { asignaturaService } from '../services/asignaturaService';
-import { agendaService } from '../services/agendaService';
 
-const Dashboard = ({ user }) => {
-  const [asignaturas, setAsignaturas] = useState([]);
-  const [eventos, setEventos] = useState([]);
+const Dashboard = ({ user, asignaturas = [], onMateriaCreada, setAsignaturaActual }) => {
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(''); // Estado para el buscador
+  const [selectedAsignaturaFocus, setSelectedAsignaturaFocus] = useState('');
+  const [nuevaAsig, setNuevaAsig] = useState({ nombre: '', profesor: '', descripcion: '', color: '#6366f1' });
+  const [eventosCalendario, setEventosCalendario] = useState([]);
   
-  // Estado para la nueva asignatura
-  const [nuevaAsig, setNuevaAsig] = useState({
-    nombre: '',
-    profesor: '',
-    descripcion: '',
-    color: '#6366f1'
-  });
-
-  // Lógica del Cronómetro Pomodoro
+  // Pomodoro State
   const [seconds, setSeconds] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
+  const [idSesionActual, setIdSesionActual] = useState(null);
+
+  // IA Generator State
+  const [selectedAsigIA, setSelectedAsigIA] = useState('');
+
+  useEffect(() => {
+    const cargarEventos = async () => {
+      if (user?.id) {
+        try {
+          const res = await axios.get(`http://localhost:8080/api/agenda/usuario/${user.id}`);
+          setEventosCalendario(res.data || []);
+        } catch (err) { console.error("Error cargando agenda:", err); }
+      }
+    };
+    cargarEventos();
+  }, [user, asignaturas]);
 
   useEffect(() => {
     let interval = null;
     if (isActive && seconds > 0) {
-      interval = setInterval(() => {
-        setSeconds((s) => s - 1);
-      }, 1000);
+      interval = setInterval(() => setSeconds(prev => prev - 1), 1000);
     } else if (seconds === 0) {
-      setIsActive(false);
       clearInterval(interval);
-      alert("¡Tiempo de enfoque terminado!");
+      setIsActive(false);
+      handleFinalizarYGuardar();
     }
     return () => clearInterval(interval);
   }, [isActive, seconds]);
 
-  const formatTime = (s) => {
-    const mins = Math.floor(s / 60);
-    const secs = s % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  // Obtener todas las flashcards de todos los mazos para la lista de "Últimas"
+  const todasLasFlashcards = useMemo(() => {
+    const cards = [];
+    asignaturas.forEach(asig => {
+      asig.mazos?.forEach(mazo => {
+        mazo.flashcards?.forEach(fc => {
+          cards.push({
+            ...fc,
+            materiaNombre: asig.nombre,
+            materiaColor: asig.color,
+            mazoNombre: mazo.titulo,
+            mazoId: mazo.id
+          });
+        });
+      });
+    });
+    // Ordenar por ID descendente (asumiendo que las más nuevas tienen ID mayor)
+    return cards.sort((a, b) => b.id - a.id);
+  }, [asignaturas]);
 
-  const cargarDatos = () => {
-    if (user?.id) {
-      asignaturaService.listarPorUsuario(user.id)
-        .then(res => setAsignaturas(res.data))
-        .catch(err => console.error("Error al cargar materias:", err));
-      
-      if (agendaService.listarPorUsuario) {
-        agendaService.listarPorUsuario(user.id)
-          .then(res => setEventos(res.data))
-          .catch(err => console.error("Error al cargar agenda:", err));
-      }
+  // Lógica de filtrado con el buscador superior
+  const flashcardsFiltradas = useMemo(() => {
+    return todasLasFlashcards.filter(fc => 
+      fc.pregunta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      fc.materiaNombre?.toLowerCase().includes(searchTerm.toLowerCase())
+    ).slice(0, 6); // Limitamos a las 6 últimas para no saturar
+  }, [todasLasFlashcards, searchTerm]);
+
+  const stats = useMemo(() => {
+    let totalFlashcards = 0;
+    let totalMinutos = 0;
+    asignaturas.forEach(asig => {
+      asig.mazos?.forEach(m => totalFlashcards += (m.flashcards?.length || 0));
+      asig.sesiones?.forEach(s => totalMinutos += (s.duracion || 0));
+    });
+    return { racha: user?.racha || 0, flashcards: totalFlashcards, tiempo: (totalMinutos / 60).toFixed(1) };
+  }, [asignaturas, user]);
+
+  const irAMateria = (id) => {
+    const asig = asignaturas.find(a => a.id === id);
+    if (asig) {
+      setAsignaturaActual(asig);
+      navigate(`/materia/${id}`);
     }
   };
 
-  useEffect(() => {
-    cargarDatos();
-  }, [user]);
-
-  // FUNCIÓN CORREGIDA CON DEPURACIÓN
-  const handleCrearAsignatura = async (e) => {
-    e.preventDefault();
-    console.log("1. Botón clickeado. Usuario actual:", user);
-
-    if (!user || !user.id) {
-      console.error("ERROR: No hay ID de usuario disponible");
-      alert("Error crítico: No se reconoce al usuario logueado. Intenta cerrar sesión y volver a entrar.");
-      return;
-    }
-
+  const handleIniciarSesion = async () => {
+    if (!selectedAsignaturaFocus) return alert("Selecciona una materia");
     try {
-      const dataAEnviar = {
-        nombre: nuevaAsig.nombre,
-        profesor: nuevaAsig.profesor,
-        descripcion: nuevaAsig.descripcion,
-        color: nuevaAsig.color,
-        usuario: { id: user.id }
-      };
-      
-      console.log("2. Enviando datos al Back:", dataAEnviar);
-
-      const res = await asignaturaService.crear(dataAEnviar);
-      
-      console.log("3. Respuesta recibida con éxito:", res.data);
-      
-      // Si llegamos aquí, la petición fue exitosa
-      setIsModalOpen(false);
-      setNuevaAsig({ nombre: '', profesor: '', descripcion: '', color: '#6366f1' });
-      
-      alert("¡Asignatura '" + nuevaAsig.nombre + "' creada correctamente!");
-      
-      // Recargamos para que aparezca en el sidebar
-      window.location.reload(); 
-
-    } catch (err) {
-      console.error("ERROR EN LA PETICIÓN:", err);
-      console.log("Detalles del error:", err.response?.data);
-      alert("Error al guardar en la base de datos. Revisa la consola (F12) para más detalles.");
-    }
+      const payload = { usuario: { id: user.id }, asignatura: { id: parseInt(selectedAsignaturaFocus) }, tipo: 'estudio', fechaInicio: new Date().toISOString().split('.')[0] };
+      const res = await axios.post('http://localhost:8080/api/sesiones/iniciar', payload);
+      setIdSesionActual(res.data.id || res.data.id_sesion);
+      setIsActive(true);
+    } catch (err) { console.error(err); }
   };
 
-  const nombreAMostrar = user?.nombre || user?.username || "Estudiante";
+  const handleFinalizarYGuardar = async () => {
+    if (!idSesionActual) return setIsActive(false);
+    const duracionReal = Math.max(1, Math.floor((25 * 60 - seconds) / 60));
+    try {
+      await axios.put(`http://localhost:8080/api/sesiones/finalizar/${idSesionActual}?duracion=${duracionReal}`);
+      setIsActive(false); setSeconds(25 * 60); setIdSesionActual(null); onMateriaCreada(); 
+    } catch (err) { console.error(err); }
+  };
 
   return (
-    <div className="flex h-full bg-[#0A0A0A] text-white overflow-hidden relative">
-      
-      {/* MODAL PARA AÑADIR ASIGNATURA */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-6">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsModalOpen(false)} />
-          <form 
-            onSubmit={handleCrearAsignatura}
-            className="relative bg-[#111] border border-white/10 p-8 rounded-[40px] w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200"
-          >
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-2xl font-bold tracking-tight">Nueva Materia</h2>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-white">
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-500 ml-2 mb-2 block">Nombre de la Asignatura</label>
-                <input 
-                  required
-                  className="w-full bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 text-sm focus:border-indigo-500 outline-none transition-all text-white"
-                  placeholder="Ej: Programación Web"
-                  value={nuevaAsig.nombre}
-                  onChange={(e) => setNuevaAsig({...nuevaAsig, nombre: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-500 ml-2 mb-2 block">Profesor / Catedrático</label>
-                <input 
-                  className="w-full bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 text-sm focus:border-indigo-500 outline-none transition-all text-white"
-                  placeholder="Nombre del docente"
-                  value={nuevaAsig.profesor}
-                  onChange={(e) => setNuevaAsig({...nuevaAsig, profesor: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-500 ml-2 mb-2 block">Descripción breve</label>
-                <textarea 
-                  className="w-full bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 text-sm focus:border-indigo-500 outline-none transition-all h-24 resize-none text-white"
-                  placeholder="¿De qué trata esta materia?"
-                  value={nuevaAsig.descripcion}
-                  onChange={(e) => setNuevaAsig({...nuevaAsig, descripcion: e.target.value})}
-                />
-              </div>
-
-              <div className="flex items-center gap-4 p-2">
-                <label className="text-[10px] font-black uppercase text-gray-500">Color distintivo:</label>
-                <input 
-                  type="color" 
-                  className="bg-transparent border-none w-10 h-10 cursor-pointer"
-                  value={nuevaAsig.color}
-                  onChange={(e) => setNuevaAsig({...nuevaAsig, color: e.target.value})}
-                />
-              </div>
-            </div>
-
-            <button 
-              type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-2xl mt-8 transition-all shadow-lg shadow-indigo-600/20"
-            >
-              Crear Asignatura
-            </button>
-          </form>
-        </div>
-      )}
-
-      <div className="flex-1 p-10 overflow-y-auto custom-scrollbar">
-        <header className="flex justify-between items-start mb-10">
+    <div className="flex flex-col lg:flex-row h-full bg-[#0A0A0A] text-white overflow-y-auto lg:overflow-hidden custom-scrollbar p-6 lg:p-10">
+      <div className="flex-1 overflow-y-auto pr-0 lg:pr-6 custom-scrollbar">
+        <header className="flex flex-col md:flex-row justify-between items-start gap-6 mb-10">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight">
-              Hola, {nombreAMostrar}.
-            </h1>
-            <div className="flex items-center gap-4 mt-4">
-              <button 
-                onClick={() => setIsModalOpen(true)}
-                className="bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-indigo-600 hover:text-white transition-all"
-              >
-                <Plus size={16} /> Añadir Materia
-              </button>
-              <p className="text-gray-500 text-xs font-medium">
-                {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-              </p>
-            </div>
+            <h1 className="text-4xl font-black tracking-tighter italic uppercase">Hola, {user?.username}.</h1>
+            <button onClick={() => setIsModalOpen(true)} className="mt-4 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg hover:scale-105 transition-transform"><Plus size={14} /> Añadir Materia</button>
           </div>
-          <div className="relative">
-            <Search className="absolute left-4 top-3.5 text-gray-600" size={18} />
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-4 top-4 text-gray-600" size={18} />
             <input 
-              type="text" 
-              placeholder="Filtrar tus flashcards..." 
-              className="bg-[#111111] border border-white/5 rounded-2xl py-3 pl-12 pr-6 text-sm w-80 focus:border-indigo-500/50 outline-none transition-all"
+              className="w-full bg-[#111] border border-white/5 rounded-2xl py-4 pl-12 pr-6 text-xs outline-none focus:border-indigo-500/50" 
+              placeholder="Buscar flashcards o materias..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </header>
 
-        <div className="grid grid-cols-4 gap-6 mb-10">
-          <StatCard icon={<Sparkles className="text-emerald-500" size={20}/>} value="75%" label="Semillas" />
-          <StatCard icon={<Flame className="text-orange-500" size={20}/>} value="28" label="Días racha" />
-          <StatCard icon={<BookOpen className="text-indigo-500" size={20}/>} value="142" label="Flashcards" />
-          <StatCard icon={<Clock className="text-gray-500" size={20}/>} value="18.5h" label="Tiempo" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+          <StatCard icon={<Flame className="text-orange-500" />} value={stats.racha} label="Días racha" />
+          <StatCard icon={<BookOpen className="text-blue-500" />} value={stats.flashcards} label="Flashcards Totales" />
+          <StatCard icon={<Clock className="text-emerald-500" />} value={`${stats.tiempo}h`} label="Tiempo Enfoque" />
         </div>
 
-        <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-[32px] p-8 mb-10 flex justify-between items-center shadow-xl shadow-red-900/20">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70 mb-1">Próximo Examen</p>
-            <h3 className="text-2xl font-bold text-white">Cálculo III - Parcial 2</h3>
+        {/* --- GENERADOR IA (Restaurado) --- */}
+        <section className="mb-10 bg-[#111] border border-white/5 rounded-[40px] p-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10"><Sparkles size={120} className="text-indigo-500" /></div>
+          <div className="flex items-center gap-2 mb-6 text-indigo-500 font-black text-[10px] uppercase tracking-[0.3em]"><Sparkles size={16} /> Generador de Flashcards IA</div>
+          <div className="flex flex-col md:flex-row gap-4 relative z-10">
+            <select 
+              value={selectedAsigIA}
+              onChange={(e) => setSelectedAsigIA(e.target.value)}
+              className="flex-1 bg-[#0A0A0A] border border-white/5 rounded-2xl py-4 px-6 text-xs outline-none focus:border-indigo-500"
+            >
+              <option value="">¿A qué materia pertenece?</option>
+              {asignaturas.map(asig => <option key={asig.id} value={asig.id}>{asig.nombre}</option>)}
+            </select>
+            <div className="flex-[2] bg-[#0A0A0A] border border-dashed border-white/10 rounded-2xl p-4 flex items-center justify-center gap-3 text-gray-500 hover:border-indigo-500/50 transition-colors cursor-pointer">
+              <FileUp size={20} />
+              <span className="text-[10px] font-black uppercase">Subir archivo (PDF, DOCX)</span>
+            </div>
           </div>
-          <button className="bg-white text-red-600 px-8 py-3 rounded-2xl font-bold text-sm hover:scale-105 transition-transform">
-            Preparar Ahora
-          </button>
-        </div>
+          <button className="w-full mt-4 bg-white/5 hover:bg-white/10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] transition-all">Crear Mazo con IA</button>
+        </section>
 
-        <section className="bg-[#111111] border border-white/5 rounded-[32px] p-10 mb-10">
-          <div className="flex items-center gap-3 mb-8">
-            <Sparkles className="text-yellow-500 fill-yellow-500" size={20} />
-            <h3 className="text-lg font-bold">Generador de Flashcards IA</h3>
+        {/* --- ÚLTIMAS FLASHCARDS (Nueva Sección con Filtro) --- */}
+        <section className="mb-10">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2 text-gray-500 font-black text-[10px] uppercase tracking-widest"><Zap size={16} /> Últimas Flashcards</div>
           </div>
-          <div className="border-2 border-dashed border-white/5 rounded-3xl h-40 flex items-center justify-center text-gray-500 hover:border-indigo-500/20 hover:bg-white/[0.01] transition-all cursor-pointer group">
-            <p className="font-medium group-hover:text-gray-300 transition-colors">Haz clic para subir tus apuntes (PDF, DOCX o Texto)</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {flashcardsFiltradas.map((card) => (
+              <div 
+                key={card.id} 
+                onClick={() => navigate(`/flashcards/mazo/${card.mazoId}`)}
+                className="bg-[#111] border border-white/5 rounded-[28px] p-5 flex items-center justify-between group hover:border-indigo-500/30 cursor-pointer transition-all"
+              >
+                <div className="flex items-center gap-4 overflow-hidden">
+                  <div className="w-1.5 h-8 rounded-full shrink-0" style={{ backgroundColor: card.materiaColor }} />
+                  <div className="truncate">
+                    <h4 className="font-bold text-sm truncate pr-4">{card.pregunta}</h4>
+                    <p className="text-[9px] text-gray-500 font-black uppercase mt-1 tracking-tighter">{card.materiaNombre} • {card.mazoNombre}</p>
+                  </div>
+                </div>
+                <ChevronRight size={16} className="text-gray-700 group-hover:text-indigo-500 transition-colors shrink-0" />
+              </div>
+            ))}
+            {flashcardsFiltradas.length === 0 && (
+              <div className="col-span-2 py-10 text-center border border-dashed border-white/5 rounded-[32px]">
+                <p className="text-gray-600 text-[10px] font-black uppercase italic">No se encontraron flashcards con "{searchTerm}"</p>
+              </div>
+            )}
           </div>
         </section>
       </div>
 
-      <aside className="w-80 bg-[#0D0D0D] border-l border-white/5 p-10">
-        <div className="bg-[#111111] border border-white/5 rounded-[40px] p-8 text-center mb-10 shadow-2xl">
-          <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-4">Modo Focus</p>
-          <div className={`text-5xl font-black mb-8 tabular-nums tracking-tighter transition-colors ${isActive ? 'text-indigo-500' : 'text-white'}`}>
-            {formatTime(seconds)}
-          </div>
-          <button 
-            onClick={() => setIsActive(!isActive)}
-            className={`w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-95 shadow-lg ${
-              isActive 
-              ? 'bg-white text-black' 
-              : 'bg-indigo-600 text-white shadow-indigo-600/20'
-            }`}
-          >
-            {isActive ? 'Pausar' : 'Iniciar'}
+      {/* Sidebar Pomodoro */}
+      <aside className="w-full lg:w-96 bg-[#0D0D0D] border-l border-white/5 p-8 flex flex-col rounded-[40px] lg:rounded-none">
+        <div className="bg-[#111] border border-white/5 rounded-[40px] p-8 text-center mb-8 shadow-2xl">
+          <p className="text-[10px] text-gray-500 font-black uppercase mb-6 tracking-widest">Enfoque Pomodoro</p>
+          <div className={`text-7xl font-black mb-8 tabular-nums tracking-tighter ${isActive ? 'text-indigo-500 animate-pulse' : 'text-white'}`}>{Math.floor(seconds/60).toString().padStart(2,'0')}:{(seconds%60).toString().padStart(2,'0')}</div>
+          <select value={selectedAsignaturaFocus} onChange={(e) => setSelectedAsignaturaFocus(e.target.value)} disabled={isActive} className="w-full bg-[#0A0A0A] border border-white/5 rounded-xl py-3 px-4 text-[10px] font-black uppercase mb-6 outline-none text-center">
+            <option value="">Selecciona Materia</option>
+            {asignaturas.map(asig => <option key={asig.id} value={asig.id}>{asig.nombre}</option>)}
+          </select>
+          <button onClick={isActive ? handleFinalizarYGuardar : handleIniciarSesion} className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${isActive ? 'bg-emerald-600' : 'bg-indigo-600'}`}>
+            {isActive ? <Save size={14}/> : <Play size={14}/>} {isActive ? 'Finalizar' : 'Iniciar'}
           </button>
         </div>
-
-        <h4 className="font-bold mb-6 text-gray-400 px-2 text-sm tracking-tight">Agenda de Hoy</h4>
-        <div className="space-y-4">
-          <AgendaItem title="Cálculo Integral" time="3:00 PM" color="bg-blue-500" />
-          <AgendaItem title="Laboratorio Física" time="5:00 PM" color="bg-emerald-500" />
-        </div>
       </aside>
+
+      {/* Modal Nueva Materia */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsModalOpen(false)} />
+          <form onSubmit={async (e) => { e.preventDefault(); await asignaturaService.crear({ ...nuevaAsig, usuario: { id: user.id } }); setIsModalOpen(false); onMateriaCreada(); }} className="relative bg-[#111] border border-white/10 p-8 rounded-[40px] w-full max-w-md">
+            <h2 className="text-2xl font-black italic mb-6 uppercase tracking-tighter">Nueva Materia</h2>
+            <input required className="w-full bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 text-sm mb-4 outline-none focus:border-indigo-500" placeholder="Nombre" onChange={e => setNuevaAsig({...nuevaAsig, nombre: e.target.value})} />
+            <button type="submit" className="w-full bg-indigo-600 py-4 rounded-2xl font-black uppercase text-[10px]">Crear</button>
+          </form>
+        </div>
+      )}
     </div>
   );
 };
 
 const StatCard = ({ icon, value, label }) => (
-  <div className="bg-[#111111] border border-white/5 p-6 rounded-[32px] hover:bg-white/[0.01] transition-colors">
-    <div className="mb-4">{icon}</div>
-    <div className="text-2xl font-black">{value}</div>
-    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">{label}</div>
-  </div>
-);
-
-const AgendaItem = ({ title, time, color }) => (
-  <div className="bg-[#111111] border border-white/5 p-5 rounded-2xl flex items-center justify-between hover:border-white/10 transition-colors cursor-default">
-    <div className="flex items-center gap-4">
-      <div className={`w-1.5 h-6 rounded-full ${color}`} />
-      <span className="text-sm font-bold text-gray-200">{title}</span>
-    </div>
-    <span className="text-[10px] font-bold text-gray-600">{time}</span>
+  <div className="bg-[#111] border border-white/5 p-8 rounded-[32px] hover:border-white/10 transition-all group">
+    <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center mb-4">{icon}</div>
+    <div className="text-3xl font-black tracking-tighter italic">{value}</div>
+    <div className="text-[9px] text-gray-600 font-black uppercase tracking-widest mt-1">{label}</div>
   </div>
 );
 
