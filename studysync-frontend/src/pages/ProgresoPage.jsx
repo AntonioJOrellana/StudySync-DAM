@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { BarChart, Bar, XAxis, ResponsiveContainer, Cell, Tooltip, YAxis, CartesianGrid } from 'recharts';
-import { Flame, BookOpen, Clock, Star, FileDown, Activity, Target } from 'lucide-react';
+import { Flame, BookOpen, Clock, FileDown, Activity, Target } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
@@ -66,12 +66,11 @@ const ProgresoPage = () => {
     if (!reportRef.current) return;
     try {
       setIsExporting(true);
-      // Pequeña espera para asegurar que los gráficos se rendericen bien
       await new Promise(r => setTimeout(r, 600));
       
       const canvas = await html2canvas(reportRef.current, { 
         backgroundColor: '#0a0a0a', 
-        scale: 2, // Alta resolución
+        scale: 2,
         useCORS: true,
         logging: false
       });
@@ -106,21 +105,25 @@ const ProgresoPage = () => {
   );
 
   return (
-    <div className="h-full bg-[#0a0a0a] text-white overflow-y-auto custom-scrollbar">
+    <div className="h-full bg-[#0a0a0a] text-white overflow-y-auto no-scrollbar">
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none !important; }
+        .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+        * { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+        *::-webkit-scrollbar { display: none !important; }
+      `}</style>
+
       <div ref={reportRef} className="p-6 sm:p-14 max-w-[1400px] mx-auto bg-[#0a0a0a]">
         
         {/* HEADER */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16">
           <div>
-            <div className="flex items-center gap-3 mb-4">
-                <Target className="text-indigo-500" size={20} />
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">Performance Overview</span>
-            </div>
-            <h1 className="text-6xl font-black italic uppercase tracking-tighter leading-none mb-4">
+            <h1 className="text-7xl sm:text-8xl font-black italic uppercase tracking-tighter leading-none mb-4 animate-in slide-in-from-left duration-700">
               Progreso<span className="text-indigo-500">.</span>
             </h1>
-            <p className="text-gray-500 font-bold tracking-tight uppercase text-sm">
-                Log de rendimiento: <span className="text-white">{user?.username || 'Admin'}</span>
+            <p className="text-gray-500 font-bold tracking-[0.2em] uppercase text-xs sm:text-sm flex items-center gap-2">
+              <span className="w-8 h-[2px] bg-indigo-500/30"></span>
+              LOG DE RENDIMIENTO: <span className="text-white italic">{user?.username || 'Admin'}</span>
             </p>
           </div>
           
@@ -135,12 +138,11 @@ const ProgresoPage = () => {
           </button>
         </header>
 
-        {/* TOP STATS */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        {/* TOP STATS - 3 CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
           <StatCard icon={<Flame color="#f97316" fill="#f97316" size={26} />} val={`${datosGlobales.rachaDias}`} label="Días de Racha" sub="CONSISTENCIA" />
-          <StatCard icon={<BookOpen color="#3b82f6" size={26} />} val={datosGlobales.totalFlashcards} label="Cards Dominadas" sub="CONOCIMIENTO" />
-          <StatCard icon={<Clock color="#10b981" size={26} />} val={`${datosGlobales.totalHoras.toFixed(1)}h`} label="Estudio Log" sub="TIEMPO" />
-          <StatCard icon={<Star color="#eab308" fill="#eab308" size={26} />} val="8.7" label="Score Global" sub="PROMEDIO" />
+          <StatCard icon={<BookOpen color="#3b82f6" size={26} />} val={datosGlobales.totalFlashcards} label="Cards Totales" sub="CONOCIMIENTO" />
+          <StatCard icon={<Clock color="#10b981" size={26} />} val={`${datosGlobales.totalHoras.toFixed(1)}h`} label="Tiempo de Estudio" sub="TIEMPO" />
         </div>
 
         {/* MAIN DATA SECTION */}
@@ -150,7 +152,7 @@ const ProgresoPage = () => {
                 <h3 className="text-xl font-black italic uppercase tracking-wider">Actividad de Enfoque</h3>
                 <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest italic">Horas por día</span>
             </div>
-            <div className="h-[350px] w-100%">
+            <div className="h-[350px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={actividadSemanalFinal}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1a1a1a" />
@@ -180,7 +182,6 @@ const ProgresoPage = () => {
             </div>
           </div>
 
-          {/* GOAL STACK */}
           <div className="xl:col-span-4 space-y-6">
             <GoalCard 
                 label="Disciplina Diaria" 
@@ -217,8 +218,7 @@ const ProgresoPage = () => {
                 <div key={i} className="p-10 bg-[#111] rounded-[32px] border border-white/5 hover:border-white/10 transition-all group">
                     <div className="flex justify-between items-end mb-8">
                         <div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-2 block">Track.ID: {asig.id_asignatura}</span>
-                            <h4 className="font-black italic uppercase text-lg tracking-tight group-hover:text-indigo-400 transition-colors">{asig.nombre}</h4>
+                            <h4 className="font-black italic uppercase text-xl tracking-tight group-hover:text-indigo-400 transition-colors">{asig.nombre}</h4>
                         </div>
                         <span className="text-xl font-black italic">{horasMateria.toFixed(1)}<span className="text-xs text-gray-600 ml-1">H</span></span>
                     </div>
@@ -242,7 +242,6 @@ const ProgresoPage = () => {
   );
 };
 
-// COMPONENTES ATÓMICOS
 const StatCard = ({ icon, val, label, sub }) => (
   <div className="bg-[#111] p-10 rounded-[35px] border border-white/5 hover:bg-white/[0.01] transition-all group shadow-2xl relative overflow-hidden">
     <div className="absolute -right-4 -top-4 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">

@@ -81,8 +81,16 @@ const CalendarPage = () => {
   };
 
   return (
-    <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto custom-scrollbar animate-in fade-in duration-500">
+    <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto no-scrollbar animate-in fade-in duration-500">
       
+      {/* Estilos para ocultar barras de scroll en toda la página y modales */}
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none !important; }
+        .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+        * { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+        *::-webkit-scrollbar { display: none !important; }
+      `}</style>
+
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
         <div>
           <h1 className="text-3xl sm:text-5xl font-black italic tracking-tighter uppercase leading-none">
@@ -197,7 +205,7 @@ const CalendarPage = () => {
               <span className="text-indigo-500 text-[10px] font-black uppercase tracking-[0.3em]">Agenda del día</span>
               <h2 className="text-4xl font-black italic uppercase tracking-tighter mt-1">{diaSeleccionado.dia}</h2>
             </div>
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
               {diaSeleccionado.eventos.length > 0 ? (
                 diaSeleccionado.eventos.map((ev, i) => (
                   <div key={i} className="bg-[#111111] p-5 rounded-3xl border border-white/5 flex gap-5 items-center group hover:border-indigo-500/30 transition-all">
@@ -210,7 +218,7 @@ const CalendarPage = () => {
                 ))
               ) : (
                 <div className="text-center py-10">
-                  <p className="text-gray-700 text-xs font-bold uppercase italic italic">Día libre de tareas</p>
+                  <p className="text-gray-700 text-xs font-bold uppercase italic">Día libre de tareas</p>
                 </div>
               )}
             </div>

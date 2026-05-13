@@ -11,4 +11,5 @@ public interface FlashcardService {
     List<Flashcard> generarDesdeRecurso(Long recursoId, Long mazoId);
     
     Flashcard actualizarRepaso(Long id, boolean acierto);
+    String consultarDudaGeneral(String duda);
 }

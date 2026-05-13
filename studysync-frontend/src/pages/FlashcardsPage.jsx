@@ -57,7 +57,15 @@ const FlashcardsPage = () => {
   }
 
   return (
-    <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto animate-in fade-in duration-500 custom-scrollbar">
+    <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto animate-in fade-in duration-500 no-scrollbar">
+      {/* Inyección de estilos para ocultar scrollbars */}
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none !important; }
+        .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+        * { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+        *::-webkit-scrollbar { display: none !important; }
+      `}</style>
+
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-12">
         <div>
           <h1 className="text-4xl sm:text-5xl font-black tracking-tighter uppercase italic leading-none">Mis Mazos</h1>
@@ -104,6 +112,12 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
   
   const [pendientes, setPendientes] = useState([]);
   const [cargandoIA, setCargandoIA] = useState(false);
+
+  const hideScrollStyle = {
+    msOverflowStyle: 'none',
+    scrollbarWidth: 'none',
+    WebkitScrollbar: { display: 'none' }
+  };
 
   useEffect(() => {
     localStorage.setItem(`fallidas_mazo_${mazoId}`, JSON.stringify(fallidas));
@@ -174,7 +188,7 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
   if (modoEstudio) {
     const tarjetaActual = pendientes.length > 0 ? pendientes[0] : fallidas[0];
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-[#0A0A0A] p-6 sm:p-10 relative">
+      <div className="h-full flex flex-col items-center justify-center bg-[#0A0A0A] p-6 sm:p-10 relative no-scrollbar">
         <button onClick={() => setModoEstudio(false)} className="absolute top-6 left-6 sm:top-10 sm:left-10 flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-white/5 hover:bg-red-500/10 rounded-xl sm:rounded-2xl border border-white/10 transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-red-500 z-10">
           <X size={14} /> Detener
         </button>
@@ -208,7 +222,7 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
   }
 
   return (
-    <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto animate-in slide-in-from-right duration-500 custom-scrollbar">
+    <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto animate-in slide-in-from-right duration-500 no-scrollbar" style={hideScrollStyle}>
       <button onClick={onVolver} className="flex items-center gap-3 px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[15px] mb-10 transition-all group">
         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
         <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500 group-hover:text-white">Volver</span>
@@ -270,7 +284,6 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
         ))}
       </div>
 
-      {/* MODALES REESCALADOS PARA MÓVIL */}
       {showIAModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-xl rounded-[32px] sm:rounded-[48px] p-8 sm:p-12 relative shadow-2xl">

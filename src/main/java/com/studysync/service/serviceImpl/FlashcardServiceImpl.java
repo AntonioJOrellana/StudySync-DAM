@@ -41,10 +41,10 @@ public class FlashcardServiceImpl implements FlashcardService {
     @Autowired
     private MazoFlashcardRepository mazoRepository;
 
-    @Value("${GEMINI_API_KEY}")
+    @Value("${gemini.api.key}")
     private String apiKey;
 
-    @Value("${GEMINI_MODEL:gemini-1.5-flash}")
+    @Value("${gemini.model:gemini-1.5-flash}")
     private String modelId;
 
     @Override
@@ -210,7 +210,7 @@ public class FlashcardServiceImpl implements FlashcardService {
     }
 
     @SuppressWarnings("unchecked")
-    private String llamarAGeminiManual(String prompt) {
+    public String llamarAGeminiManual(String prompt) {
         String url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelId + ":generateContent?key=" + apiKey;
 
         // Configuración de Timeouts para evitar cortes de conexión
@@ -268,4 +268,12 @@ public class FlashcardServiceImpl implements FlashcardService {
         
         return f;
     }
+    @Override
+    public String consultarDudaGeneral(String duda) {
+    String prompt = "Actúa como un tutor académico experto. El alumno tiene la siguiente duda: " + duda + 
+                    ". Responde de forma concisa, clara y amena. Máximo 3 párrafos.";
+    
+    
+    return llamarAGeminiManual(prompt);
+}
 }

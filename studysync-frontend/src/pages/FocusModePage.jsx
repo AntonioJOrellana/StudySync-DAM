@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Play, Square, Settings, Lightbulb, ChevronDown } from 'lucide-react';
+import { Play, Square, Lightbulb, ChevronDown } from 'lucide-react';
 
 const FocusModePage = () => {
   // --- ESTADOS ---
@@ -97,8 +97,16 @@ const FocusModePage = () => {
   const format = (s) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 
   return (
-    <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto custom-scrollbar animate-in fade-in duration-500">
+    <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto no-scrollbar animate-in fade-in duration-500">
       
+      {/* Estilos para ocultar barras de scroll */}
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none !important; }
+        .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+        * { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+        *::-webkit-scrollbar { display: none !important; }
+      `}</style>
+
       <header className="mb-8 sm:mb-12">
         <h1 className="text-3xl sm:text-5xl font-black italic tracking-tighter uppercase leading-none">Modo Focus</h1>
         <p className="text-gray-500 text-xs sm:text-sm mt-3 font-medium tracking-wide uppercase">CONCENTRACIÓN PROFUNDA</p>
@@ -155,9 +163,7 @@ const FocusModePage = () => {
                 {activo ? <div className="flex gap-1.5"><div className="w-1.5 h-6 bg-white rounded-full"/><div className="w-1.5 h-6 bg-white rounded-full"/></div> : <Play size={28} fill="white" className="ml-1" />}
               </button>
 
-              <button className="w-12 h-12 sm:w-14 sm:h-14 bg-[#1A1A1A] rounded-full flex items-center justify-center hover:bg-white/5 transition-all active:scale-90">
-                <Settings size={18} />
-              </button>
+              {/* Se ha eliminado el botón de engranaje (Settings) */}
             </div>
           </div>
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   BookOpen, Plus, GraduationCap, Clock, 
   FileText, Video, ChevronRight, Flame, Link as LinkIcon, Monitor,
-  AlertCircle, Layers, Activity
+  AlertCircle, Layers, Activity, Brain
 } from 'lucide-react';
 
 import ModalNuevoRecurso from '../components/ModalNuevoRecurso';
@@ -75,16 +75,11 @@ const MateriaDetallePage = ({ asignatura }) => {
     const minutosTotales = listaSesiones.reduce((acc, sesion) => acc + (Number(sesion.duracion) || 0), 0);
     const horasCalculadas = minutosTotales / 60;
 
-    const progresoBase = recursos.length * 15;
-    const progresoActividad = mazos.length * 10;
-    const progresoTotal = Math.min(100, progresoBase + progresoActividad);
-    
     return {
       totalFlashcards,
-      horasVuelo: horasCalculadas.toFixed(1),
-      progreso: Math.round(progresoTotal)
+      horasVuelo: horasCalculadas.toFixed(1)
     };
-  }, [mazos, recursos, asignatura]);
+  }, [mazos, asignatura]);
 
   if (!asignatura) {
     return (
@@ -99,7 +94,11 @@ const MateriaDetallePage = ({ asignatura }) => {
   const colorConOpacidad = (hex, opacity) => `${hex}${opacity}`;
 
   return (
-    <div className="h-full bg-[#0A0A0A] text-white overflow-y-auto custom-scrollbar p-6 sm:p-10 animate-in fade-in duration-500">
+    <div className="h-full bg-[#0A0A0A] text-white overflow-y-auto no-scrollbar p-6 sm:p-10 animate-in fade-in duration-500">
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none !important; }
+        .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+      `}</style>
       
       {/* HEADER DINÁMICO */}
       <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-8 mb-12">
@@ -119,10 +118,10 @@ const MateriaDetallePage = ({ asignatura }) => {
                 <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter" style={{ backgroundColor: colorConOpacidad(materiaColor, '20'), color: materiaColor }}>Asignatura Activa</span>
                 {cargando && <div className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />}
             </div>
-            <h1 className="text-4xl sm:text-6xl font-black tracking-tighter italic uppercase leading-none">
+            <h1 className="text-4xl sm:text-7xl font-black tracking-tighter italic uppercase leading-[0.8]" style={{ color: materiaColor }}>
               {asignatura.nombre}
             </h1>
-            <p className="text-gray-500 font-bold mt-3 text-sm sm:text-lg max-w-2xl">
+            <p className="text-gray-500 font-bold mt-4 text-sm sm:text-lg max-w-2xl">
               {asignatura.descripcion || "Módulo de estudio sin descripción técnica."}
             </p>
           </div>
@@ -138,36 +137,37 @@ const MateriaDetallePage = ({ asignatura }) => {
       </header>
 
       {/* MÉTRICAS DE RENDIMIENTO */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-12">
-        <StatCard label="Nivel de Avance" value={`${statsReales.progreso}%`} sub="TOTAL" color={materiaColor} />
-        <StatCard label="Base de Datos" value={`${statsReales.totalFlashcards}`} sub="CARDS" color={materiaColor} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-12">
+        <StatCard label="Flashcards Generadas" value={`${statsReales.totalFlashcards}`} sub="TOTAL" color={materiaColor} />
         <StatCard label="Tiempo Focus" value={`${statsReales.horasVuelo}h`} sub="LOG" color={materiaColor} />
-        <StatCard label="Críticos" value={fallidasRefuerzo.length} sub="REPASO" color="#ef4444" />
+        <StatCard label="Flashcards para repasar" value={fallidasRefuerzo.length} sub="PENDIENTE" color="#ef4444" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2 space-y-12">
           
-          {/* SECCIÓN DE DATOS DEL PROFESOR */}
           <InfoCard icon={<GraduationCap size={22} />} label="Catedrático / Instructor" value={asignatura.profesor || "Personal Docente No Asignado"} color={materiaColor} />
 
-          {/* PENDIENTES DE REFUERZO (Solo si hay errores) */}
+          {/* ZONA DE REFUERZO CRÍTICO REINTEGRADA */}
           {fallidasRefuerzo.length > 0 && (
-            <section className="animate-in slide-in-from-right-4 duration-500">
+            <section className="animate-in slide-in-from-bottom-4 duration-700">
               <div className="flex items-center gap-3 mb-6">
                 <div className="h-6 w-1 bg-red-500 rounded-full" />
                 <h3 className="text-xl font-black italic uppercase tracking-wider text-red-500">Zona de Refuerzo Crítico</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {fallidasRefuerzo.slice(0, 4).map((f, idx) => (
-                  <div key={idx} className="bg-[#111] border border-red-500/10 p-6 rounded-[24px] hover:border-red-500/30 transition-all group">
-                    <div className="flex justify-between items-start mb-3">
-                        <p className="text-xs font-black italic text-gray-200 leading-tight">¿{f.anverso || f.pregunta}?</p>
-                        <span className="text-[8px] font-black bg-red-500/10 px-2 py-1 rounded text-red-500 uppercase">{f.nombreMazo}</span>
+                  <div key={idx} className="bg-[#111] border border-red-500/10 p-6 rounded-[24px] hover:border-red-500/30 transition-all group relative overflow-hidden">
+                    <div className="flex justify-between items-start mb-3 relative z-10">
+                        <p className="text-xs font-black italic text-gray-200 leading-tight pr-8">¿{f.anverso || f.pregunta}?</p>
+                        <span className="text-[8px] font-black bg-red-500/10 px-2 py-1 rounded text-red-500 uppercase shrink-0">{f.nombreMazo}</span>
                     </div>
-                    <p className="text-[11px] text-gray-500 leading-relaxed border-t border-white/5 pt-3 mt-3 italic">
-                        <span className="text-red-500 font-black mr-2">FIX:</span> {f.reverso || f.respuesta}
+                    <p className="text-[11px] text-gray-500 leading-relaxed border-t border-white/5 pt-3 mt-3 italic relative z-10">
+                        <span className="text-red-500 font-black mr-2 uppercase">Fix:</span> {f.reverso || f.respuesta}
                     </p>
+                    <div className="absolute -right-4 -bottom-4 opacity-[0.02] text-red-500 group-hover:scale-110 transition-transform">
+                        <AlertCircle size={80} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -257,25 +257,6 @@ const MateriaDetallePage = ({ asignatura }) => {
               </div>
             </div>
           </div>
-
-          {/* IA INSIGHT CARD */}
-          <div 
-            className="p-8 rounded-[32px] border transition-all hover:scale-[1.02] cursor-pointer group"
-            style={{ 
-              backgroundColor: colorConOpacidad(materiaColor, '05'),
-              borderColor: colorConOpacidad(materiaColor, '10') 
-            }}
-          >
-            <div className="flex items-center gap-3 mb-5" style={{ color: materiaColor }}>
-              <Flame size={22} fill="currentColor" className="group-hover:animate-bounce" />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em]">IA Engine Insight</span>
-            </div>
-            <p className="text-xs sm:text-sm text-gray-400 leading-relaxed italic font-medium">
-              {recursos.length > 0 
-                ? `Análisis completado: Se han detectado patrones de estudio en ${recursos.length} fuentes. Sugerencia: Repasar conceptos de la unidad 2.`
-                : "Añade recursos para que la IA pueda generar un mapa de calor sobre tu aprendizaje."}
-            </p>
-          </div>
         </div>
       </div>
 
@@ -289,7 +270,6 @@ const MateriaDetallePage = ({ asignatura }) => {
   );
 };
 
-// COMPONENTES DE SOPORTE CON ESTILO MEJORADO
 const StatCard = ({ label, value, sub, color }) => (
   <div className="bg-[#111111] border border-white/5 p-6 sm:p-8 rounded-[32px] hover:border-white/20 transition-all group shadow-xl">
     <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.2em] mb-4 group-hover:text-gray-400 transition-colors">{label}</p>
