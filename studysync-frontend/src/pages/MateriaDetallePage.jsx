@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { 
   BookOpen, Plus, GraduationCap, Clock, 
   FileText, Video, ChevronRight, Flame, Link as LinkIcon, Monitor,
-  AlertCircle, Layers, Activity, Brain
+  AlertCircle, Layers, Activity, Brain, Trash2
 } from 'lucide-react';
 
 import ModalNuevoRecurso from '../components/ModalNuevoRecurso';
 import { recursoService } from '../services/recursoService';
 import { mazoService } from '../services/mazoService';
+import { asignaturaService } from '../services/asignaturaService';
 
 const MateriaDetallePage = ({ asignatura }) => {
   const navigate = useNavigate();
@@ -81,6 +82,19 @@ const MateriaDetallePage = ({ asignatura }) => {
     };
   }, [mazos, asignatura]);
 
+  const handleEliminarAsignatura = async () => {
+    const idAsig = asignatura.id_asignatura || asignatura.id;
+    if (window.confirm(`¿Estás seguro de que deseas eliminar "${asignatura.nombre}"? Esta acción no se puede deshacer.`)) {
+      try {
+        await asignaturaService.eliminar(idAsig);
+        window.location.href = '/'; 
+      } catch (error) {
+        console.error("Error al eliminar asignatura:", error);
+        alert("No se pudo eliminar la asignatura.");
+      }
+    }
+  };
+
   if (!asignatura) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-600 gap-4">
@@ -94,10 +108,12 @@ const MateriaDetallePage = ({ asignatura }) => {
   const colorConOpacidad = (hex, opacity) => `${hex}${opacity}`;
 
   return (
-    <div className="h-full bg-[#0A0A0A] text-white overflow-y-auto no-scrollbar p-6 sm:p-10 animate-in fade-in duration-500">
+    <div className="w-full h-full bg-[#0A0A0A] text-white overflow-y-auto no-scrollbar p-6 sm:p-14 animate-in fade-in duration-500">
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none !important; }
         .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+        *::-webkit-scrollbar { display: none !important; }
+        * { -ms-overflow-style: none !important; scrollbar-width: none !important; }
       `}</style>
       
       {/* HEADER DINÁMICO */}
@@ -121,19 +137,30 @@ const MateriaDetallePage = ({ asignatura }) => {
             <h1 className="text-4xl sm:text-7xl font-black tracking-tighter italic uppercase leading-[0.8]" style={{ color: materiaColor }}>
               {asignatura.nombre}
             </h1>
-            <p className="text-gray-500 font-bold mt-4 text-sm sm:text-lg max-w-2xl">
+            <p className="text-gray-500 font-bold mt-4 text-sm sm:text-lg max-w-4xl">
               {asignatura.descripcion || "Módulo de estudio sin descripción técnica."}
             </p>
           </div>
         </div>
 
-        <button 
-          onClick={() => setModalAbierto(true)}
-          className="flex items-center justify-center gap-3 px-8 py-5 rounded-2xl font-black uppercase text-xs tracking-widest transition-all hover:brightness-110 active:scale-95 shadow-2xl"
-          style={{ backgroundColor: materiaColor, color: '#fff' }}
-        >
-          <Plus size={18} /> Nuevo Recurso
-        </button>
+        {/* CONTENEDOR DE ACCIONES EN EL HEADER */}
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleEliminarAsignatura}
+            className="flex items-center justify-center p-5 rounded-2xl transition-all hover:bg-red-500/10 border border-white/5 hover:border-red-500/50 text-gray-500 hover:text-red-500 shadow-2xl"
+            title="Eliminar Asignatura"
+          >
+            <Trash2 size={20} />
+          </button>
+
+          <button 
+            onClick={() => setModalAbierto(true)}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-8 py-5 rounded-2xl font-black uppercase text-xs tracking-widest transition-all hover:brightness-110 active:scale-95 shadow-2xl"
+            style={{ backgroundColor: materiaColor, color: '#fff' }}
+          >
+            <Plus size={18} /> Nuevo Recurso
+          </button>
+        </div>
       </header>
 
       {/* MÉTRICAS DE RENDIMIENTO */}
@@ -146,9 +173,9 @@ const MateriaDetallePage = ({ asignatura }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2 space-y-12">
           
-          <InfoCard icon={<GraduationCap size={22} />} label="Catedrático / Instructor" value={asignatura.profesor || "Personal Docente No Asignado"} color={materiaColor} />
+          <InfoCard icon={<GraduationCap size={22} />} label="Profesor / Docente" value={asignatura.profesor || "Personal Docente No Asignado"} color={materiaColor} />
 
-          {/* ZONA DE REFUERZO CRÍTICO REINTEGRADA */}
+          {/* ZONA DE REFUERZO CRÍTICO */}
           {fallidasRefuerzo.length > 0 && (
             <section className="animate-in slide-in-from-bottom-4 duration-700">
               <div className="flex items-center gap-3 mb-6">
@@ -217,7 +244,7 @@ const MateriaDetallePage = ({ asignatura }) => {
                 ))
               ) : (
                 <div className="p-12 text-center">
-                   <p className="text-gray-700 text-xs font-bold uppercase tracking-widest italic">Repositorio vacío</p>
+                    <p className="text-gray-700 text-xs font-bold uppercase tracking-widest italic">Repositorio vacío</p>
                 </div>
               )}
             </div>
@@ -270,6 +297,7 @@ const MateriaDetallePage = ({ asignatura }) => {
   );
 };
 
+// COMPONENTES AUXILIARES
 const StatCard = ({ label, value, sub, color }) => (
   <div className="bg-[#111111] border border-white/5 p-6 sm:p-8 rounded-[32px] hover:border-white/20 transition-all group shadow-xl">
     <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.2em] mb-4 group-hover:text-gray-400 transition-colors">{label}</p>

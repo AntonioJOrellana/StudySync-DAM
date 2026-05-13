@@ -27,10 +27,7 @@ public class MazoFlashcardServiceImpl implements MazoFlashcardService {
     public List<MazoFlashcard> listarMazosPorAsignatura(Long asignaturaId) {
         // Usamos el estándar con guion bajo: Objeto_Campo
         List<MazoFlashcard> mazos = mazoRepository.findByAsignaturaId(asignaturaId);
-        
-        if (mazos.isEmpty()) {
-            throw new ResourceNotFoundException("No se encontraron mazos para la asignatura con ID: " + asignaturaId);
-        }
+
         
         return mazos;
     }

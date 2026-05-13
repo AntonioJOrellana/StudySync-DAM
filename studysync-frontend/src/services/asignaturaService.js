@@ -9,6 +9,7 @@ export const asignaturaService = {
   obtenerPorId: (id) => api.get(`/asignaturas/${id}`),
   crear: (data) => api.post('/asignaturas', data),
   
+  eliminar: (id) => api.delete(`/asignaturas/${id}`),
   // NUEVO: Registrar sesión de estudio
   // El backend debe esperar un objeto con 'duracion' y el 'id' de la asignatura
   registrarSesion: (asignaturaId, duracionMinutos) => 

@@ -1,6 +1,6 @@
 package com.studysync.controller;
 
-import com.studysync.dto.ProgresoDTO; // <--- Importante añadir el import del DTO
+import com.studysync.dto.ProgresoDTO; 
 import com.studysync.model.SesionEstudio;
 import com.studysync.service.SesionEstudioService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,8 +19,8 @@ public class SesionEstudioController {
     private SesionEstudioService sesionEstudioService;
 
     /**
-     * NUEVO: Obtiene todas las estadísticas de progreso para el dashboard
-     * URL: GET http://localhost:8080/api/sesiones/progreso/1
+     * Obtiene todas las estadísticas de progreso filtradas por usuario para el dashboard.
+     * Esto evita que los datos de diferentes usuarios se mezclen en las gráficas.
      */
     @GetMapping("/progreso/{usuarioId}")
     public ResponseEntity<ProgresoDTO> obtenerProgreso(@PathVariable Long usuarioId) {
@@ -28,8 +28,10 @@ public class SesionEstudioController {
         return ResponseEntity.ok(progreso);
     }
 
-    // --- TUS MÉTODOS ANTERIORES ---
-
+    /**
+     * Lista el historial de sesiones de un usuario específico.
+     * Es el método que debe llamar el Modo Focus para mostrar "Sesiones de hoy".
+     */
     @GetMapping("/usuario/{usuarioId}")
     public ResponseEntity<List<SesionEstudio>> listarPorUsuario(@PathVariable Long usuarioId) {
         List<SesionEstudio> sesiones = sesionEstudioService.listarPorUsuario(usuarioId);
@@ -38,6 +40,7 @@ public class SesionEstudioController {
 
     @PostMapping("/iniciar")
     public ResponseEntity<SesionEstudio> iniciarSesion(@RequestBody SesionEstudio sesion) {
+        // Asegúrate de que el objeto 'sesion' que viene del front incluya el usuario asignado
         SesionEstudio nuevaSesion = sesionEstudioService.iniciarSesion(sesion);
         return ResponseEntity.status(HttpStatus.CREATED).body(nuevaSesion);
     }

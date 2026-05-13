@@ -11,26 +11,35 @@ const FocusModePage = () => {
   const [asigSeleccionada, setAsigSeleccionada] = useState(null);
   const [sesionesHoy, setSesionesHoy] = useState([]);
   
-  const usuario = JSON.parse(localStorage.getItem('usuario')) || { id: 3, username: "antonio123" };
+  // CORRECCIÓN: Usamos la clave 'user' que es la que guarda tu AuthService
+  // y eliminamos los datos de "antonio123" para que no se mezclen.
+  const usuario = JSON.parse(localStorage.getItem('user'));
 
   // --- CARGA DE DATOS ---
   const fetchDatos = useCallback(async () => {
+    // Si no hay usuario logueado, no intentamos peticiones
+    if (!usuario?.id) return;
+
     try {
+      // Cargamos asignaturas del usuario actual
       const resAsig = await axios.get(`http://localhost:8080/api/asignaturas/usuario/${usuario.id}`);
       setAsignaturas(resAsig.data);
-      // Seleccionamos la primera por defecto si no hay ninguna elegida
+      
       if (resAsig.data.length > 0 && !asigSeleccionada) {
         setAsigSeleccionada(resAsig.data[0]);
       }
 
+      // Cargamos sesiones del usuario actual
       const resSesiones = await axios.get(`http://localhost:8080/api/sesiones/usuario/${usuario.id}`);
       setSesionesHoy(resSesiones.data);
     } catch (err) {
       console.error("Error cargando datos:", err);
     }
-  }, [usuario.id, asigSeleccionada]);
+  }, [usuario?.id, asigSeleccionada]);
 
-  useEffect(() => { fetchDatos(); }, [fetchDatos]);
+  useEffect(() => { 
+    fetchDatos(); 
+  }, [fetchDatos]);
 
   // --- LÓGICA DEL CRONÓMETRO ---
   useEffect(() => {
@@ -46,6 +55,7 @@ const FocusModePage = () => {
   // --- ACCIONES API ---
   const iniciarSesion = async () => {
     if (!asigSeleccionada) return alert("Selecciona una asignatura");
+    if (!usuario?.id) return alert("Error de sesión: Usuario no identificado");
     
     try {
       const ahora = new Date();
@@ -78,7 +88,6 @@ const FocusModePage = () => {
       return;
     }
 
-    // Calculamos duración real (mínimo 1 min)
     const duracionReal = Math.max(1, Math.floor((25 * 60 - segundos) / 60));
 
     try {
@@ -86,7 +95,7 @@ const FocusModePage = () => {
       setActivo(false);
       setSegundos(25 * 60);
       setIdSesionActual(null);
-      fetchDatos(); // Refrescamos historial y contadores
+      fetchDatos(); 
     } catch (err) { 
       console.error("Error al finalizar:", err);
       setActivo(false);
@@ -99,7 +108,6 @@ const FocusModePage = () => {
   return (
     <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto no-scrollbar animate-in fade-in duration-500">
       
-      {/* Estilos para ocultar barras de scroll */}
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none !important; }
         .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
@@ -127,6 +135,7 @@ const FocusModePage = () => {
                 onChange={(e) => setAsigSeleccionada(asignaturas.find(a => a.id === Number(e.target.value)))}
                 disabled={activo}
               >
+                {asignaturas.length === 0 && <option value="">Sin asignaturas</option>}
                 {asignaturas.map(a => (
                   <option key={a.id} value={a.id} className="bg-[#111111]">{a.nombre}</option>
                 ))}
@@ -162,8 +171,6 @@ const FocusModePage = () => {
               >
                 {activo ? <div className="flex gap-1.5"><div className="w-1.5 h-6 bg-white rounded-full"/><div className="w-1.5 h-6 bg-white rounded-full"/></div> : <Play size={28} fill="white" className="ml-1" />}
               </button>
-
-              {/* Se ha eliminado el botón de engranaje (Settings) */}
             </div>
           </div>
 

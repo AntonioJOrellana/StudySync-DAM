@@ -8,10 +8,12 @@ const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // CORRECCIÓN: 'username' en lugar de 'nombre' para coincidir con el Modelo Java
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    nombre: ''
+    username: ''
   });
 
   const handleSubmit = async (e) => {
@@ -21,6 +23,8 @@ const AuthPage = () => {
     
     try {
       const endpoint = isLogin ? '/usuarios/login' : '/usuarios/registrar';
+      
+      // Enviamos el formData que ahora contiene 'username'
       const res = await axios.post(`http://localhost:8080/api${endpoint}`, formData);
       
       // Simula un pequeño retraso para la animación de carga
@@ -29,7 +33,8 @@ const AuthPage = () => {
       }, 800);
     } catch (err) {
       setLoading(false);
-      setError(err.response?.data || 'Credenciales inválidas. Verifica tu conexión.');
+      // Capturamos el mensaje de error del backend si existe
+      setError(err.response?.data || 'Error en la autenticación. Revisa tus datos.');
     }
   };
 
@@ -64,7 +69,7 @@ const AuthPage = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {!isLogin && (
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-5">Nombre</label>
+              <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-5">Nombre de Usuario</label>
               <div className="relative group">
                 <User className="absolute left-6 top-5 text-gray-600 group-focus-within:text-indigo-500 transition-colors" size={18} />
                 <input 
@@ -72,7 +77,8 @@ const AuthPage = () => {
                   type="text" 
                   placeholder="IDENTIDAD" 
                   className="w-full bg-[#161616] border border-white/5 rounded-2xl py-5 pl-16 pr-8 text-white focus:outline-none focus:border-indigo-500/50 text-sm font-bold transition-all placeholder:text-gray-800"
-                  onChange={(e) => setFormData({...formData, nombre: e.target.value})}
+                  // CORRECCIÓN: Mapeo a 'username'
+                  onChange={(e) => setFormData({...formData, username: e.target.value})}
                 />
               </div>
             </div>
@@ -124,7 +130,10 @@ const AuthPage = () => {
 
         {/* TOGGLE MODE */}
         <button 
-          onClick={() => setIsLogin(!isLogin)} 
+          onClick={() => {
+            setIsLogin(!isLogin);
+            setError(''); // Limpiamos errores al cambiar
+          }} 
           className="w-full mt-10 text-[10px] text-gray-600 font-black uppercase tracking-[0.2em] hover:text-indigo-400 transition-colors"
         >
           {isLogin ? '¿No tienes cuenta? Desplegar Registro' : '¿Ya eres miembro? Iniciar Sesión'}
