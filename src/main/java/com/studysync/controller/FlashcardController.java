@@ -48,6 +48,7 @@ public class FlashcardController {
 
     @GetMapping("/mazo/{mazoId}/pendientes")
     public ResponseEntity<List<Flashcard>> obtenerPendientes(@PathVariable Long mazoId) {
+        // Usamos LocalDateTime.now() para traer las que ya vencieron o vencen ahora
         List<Flashcard> pendientes = flashcardRepository.findByMazoIdAndProximoRepasoBefore(
                 mazoId, LocalDateTime.now());
         return ResponseEntity.ok(pendientes);
@@ -56,5 +57,12 @@ public class FlashcardController {
     @PostMapping
     public ResponseEntity<Flashcard> crearManual(@RequestBody Flashcard flashcard) {
         return ResponseEntity.status(HttpStatus.CREATED).body(flashcardService.guardar(flashcard));
+    }
+
+    // --- NUEVO: Necesario para la funcionalidad de borrado desde el frontend ---
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        flashcardService.eliminar(id);
+        return ResponseEntity.noContent().build();
     }
 }

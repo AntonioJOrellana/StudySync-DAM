@@ -1,30 +1,46 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   BookOpen, Plus, GraduationCap, Clock, 
   FileText, Video, ChevronRight, Flame, Link as LinkIcon, Monitor,
-  AlertCircle, Layers, Activity, Brain, Trash2
+  AlertCircle, Layers, Activity, Brain, Trash2, Edit2
 } from 'lucide-react';
 
 import ModalNuevoRecurso from '../components/ModalNuevoRecurso';
+import ModalEditarAsignatura from '../components/ModalEditarAsignatura';
 import { recursoService } from '../services/recursoService';
 import { mazoService } from '../services/mazoService';
 import { asignaturaService } from '../services/asignaturaService';
 
-const MateriaDetallePage = ({ asignatura }) => {
+const MateriaDetallePage = ({ asignatura: propAsignatura, onAsignaturaActualizada }) => {
+  const { id } = useParams();
   const navigate = useNavigate();
+  
+  const [asignatura, setAsignatura] = useState(null);
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
   const [recursos, setRecursos] = useState([]);
   const [mazos, setMazos] = useState([]);
-  const [cargando, setCargando] = useState(false);
+  const [cargando, setCargando] = useState(true);
   const [fallidasRefuerzo, setFallidasRefuerzo] = useState([]);
 
+  useEffect(() => {
+    if (propAsignatura) {
+      setAsignatura(propAsignatura);
+    }
+  }, [propAsignatura]);
+
   const cargarDatos = useCallback(async () => {
-    if (!asignatura?.id && !asignatura?.id_asignatura) return;
-    const idAsig = asignatura.id_asignatura || asignatura.id;
+    const idAsig = id || asignatura?.id_asignatura || asignatura?.id;
+    if (!idAsig) return;
     
     setCargando(true);
     try {
+      // Obtenemos los datos frescos del servidor
+      const resAsig = await asignaturaService.obtenerPorId(idAsig);
+      const currentAsignatura = resAsig.data || resAsig;
+      setAsignatura(currentAsignatura);
+
       const [dataRecursos, resMazos] = await Promise.allSettled([
         recursoService.getRecursosPorAsignatura(idAsig),
         mazoService.listarPorAsignatura(idAsig)
@@ -37,7 +53,7 @@ const MateriaDetallePage = ({ asignatura }) => {
       if (resMazos.status === 'fulfilled' && resMazos.value?.data) {
         listaMazos = resMazos.value.data;
       } else {
-        listaMazos = asignatura.mazos || [];
+        listaMazos = currentAsignatura?.mazos || [];
       }
       setMazos(listaMazos);
 
@@ -59,11 +75,26 @@ const MateriaDetallePage = ({ asignatura }) => {
     } finally {
       setCargando(false);
     }
-  }, [asignatura]);
+  }, [id]);
 
   useEffect(() => {
     cargarDatos();
   }, [cargarDatos]);
+
+  // ESTA ES LA FUNCIÓN CLAVE
+  const handleAsignaturaActualizada = (updated) => {
+    // 1. Actualizamos el estado local de esta página
+    setAsignatura(updated); 
+    
+    // 2. Ejecutamos la función que viene de App.jsx (cargarMaterias)
+    // Esto refrescará el Sidebar inmediatamente
+    if (typeof onAsignaturaActualizada === 'function') {
+      onAsignaturaActualizada(updated); 
+    }
+    
+    // 3. Volvemos a pedir datos por si acaso
+    cargarDatos();
+  };
 
   const statsReales = useMemo(() => {
     const totalFlashcards = mazos.reduce((acc, mazo) => {
@@ -72,7 +103,7 @@ const MateriaDetallePage = ({ asignatura }) => {
       return acc + cantidad;
     }, 0);
     
-    const listaSesiones = asignatura.sesiones || [];
+    const listaSesiones = asignatura?.sesiones || [];
     const minutosTotales = listaSesiones.reduce((acc, sesion) => acc + (Number(sesion.duracion) || 0), 0);
     const horasCalculadas = minutosTotales / 60;
 
@@ -83,11 +114,17 @@ const MateriaDetallePage = ({ asignatura }) => {
   }, [mazos, asignatura]);
 
   const handleEliminarAsignatura = async () => {
-    const idAsig = asignatura.id_asignatura || asignatura.id;
-    if (window.confirm(`¿Estás seguro de que deseas eliminar "${asignatura.nombre}"? Esta acción no se puede deshacer.`)) {
+    const idAsig = asignatura?.id_asignatura || asignatura?.id;
+    const confirmar = window.confirm(
+      `¿Estás seguro de que deseas eliminar la asignatura "${asignatura?.nombre}"? Esta acción no se puede deshacer.`
+    );
+
+    if (confirmar) {
       try {
         await asignaturaService.eliminar(idAsig);
-        window.location.href = '/'; 
+        // Al eliminar, refrescamos el sidebar antes de irnos
+        if (typeof onAsignaturaActualizada === 'function') onAsignaturaActualizada();
+        window.location.href = '/dashboard'; 
       } catch (error) {
         console.error("Error al eliminar asignatura:", error);
         alert("No se pudo eliminar la asignatura.");
@@ -95,11 +132,32 @@ const MateriaDetallePage = ({ asignatura }) => {
     }
   };
 
+  const handleEliminarRecurso = async (idRecurso, nombreRecurso) => {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar el archivo "${nombreRecurso}"?`)) {
+      try {
+        await recursoService.eliminar(idRecurso);
+        cargarDatos();
+      } catch (error) {
+        console.error("Error al eliminar recurso:", error);
+        alert("No se pudo eliminar el recurso.");
+      }
+    }
+  };
+
+  if (cargando && !asignatura) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-[#0A0A0A] text-gray-600 gap-4">
+        <Activity size={48} className="text-indigo-500 animate-spin opacity-50" />
+        <p className="font-black uppercase tracking-widest text-[10px] italic">Sincronizando Módulo...</p>
+      </div>
+    );
+  }
+
   if (!asignatura) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-gray-600 gap-4">
-        <Activity size={48} className="opacity-20 animate-pulse" />
-        <p className="font-bold uppercase tracking-widest text-xs italic">Selecciona una materia para auditar</p>
+      <div className="flex flex-col items-center justify-center h-full bg-[#0A0A0A] text-gray-600 gap-4">
+        <AlertCircle size={48} className="opacity-20" />
+        <p className="font-bold uppercase tracking-widest text-xs italic">Materia no encontrada</p>
       </div>
     );
   }
@@ -116,7 +174,6 @@ const MateriaDetallePage = ({ asignatura }) => {
         * { -ms-overflow-style: none !important; scrollbar-width: none !important; }
       `}</style>
       
-      {/* HEADER DINÁMICO */}
       <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-8 mb-12">
         <div className="flex items-center gap-6">
           <div 
@@ -143,14 +200,21 @@ const MateriaDetallePage = ({ asignatura }) => {
           </div>
         </div>
 
-        {/* CONTENEDOR DE ACCIONES EN EL HEADER */}
         <div className="flex items-center gap-3">
           <button 
+            onClick={() => setModalEditarAbierto(true)}
+            className="flex items-center justify-center p-5 rounded-2xl transition-all bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 text-gray-400 hover:text-white shadow-2xl group"
+            title="Editar Asignatura"
+          >
+            <Edit2 size={20} className="group-hover:scale-110 transition-transform" />
+          </button>
+
+          <button 
             onClick={handleEliminarAsignatura}
-            className="flex items-center justify-center p-5 rounded-2xl transition-all hover:bg-red-500/10 border border-white/5 hover:border-red-500/50 text-gray-500 hover:text-red-500 shadow-2xl"
+            className="flex items-center justify-center p-5 rounded-2xl transition-all bg-red-500/5 hover:bg-red-500/10 border border-white/5 hover:border-red-500/50 text-gray-500 hover:text-red-500 shadow-2xl group"
             title="Eliminar Asignatura"
           >
-            <Trash2 size={20} />
+            <Trash2 size={20} className="group-hover:scale-110 transition-transform" />
           </button>
 
           <button 
@@ -163,7 +227,6 @@ const MateriaDetallePage = ({ asignatura }) => {
         </div>
       </header>
 
-      {/* MÉTRICAS DE RENDIMIENTO */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-12">
         <StatCard label="Flashcards Generadas" value={`${statsReales.totalFlashcards}`} sub="TOTAL" color={materiaColor} />
         <StatCard label="Tiempo Focus" value={`${statsReales.horasVuelo}h`} sub="LOG" color={materiaColor} />
@@ -175,7 +238,6 @@ const MateriaDetallePage = ({ asignatura }) => {
           
           <InfoCard icon={<GraduationCap size={22} />} label="Profesor / Docente" value={asignatura.profesor || "Personal Docente No Asignado"} color={materiaColor} />
 
-          {/* ZONA DE REFUERZO CRÍTICO */}
           {fallidasRefuerzo.length > 0 && (
             <section className="animate-in slide-in-from-bottom-4 duration-700">
               <div className="flex items-center gap-3 mb-6">
@@ -201,7 +263,6 @@ const MateriaDetallePage = ({ asignatura }) => {
             </section>
           )}
 
-          {/* LISTADO DE MAZOS */}
           <section>
             <div className="flex items-center justify-between mb-8">
                 <h3 className="text-xl font-black italic uppercase tracking-wider">Mazos de Aprendizaje</h3>
@@ -228,7 +289,6 @@ const MateriaDetallePage = ({ asignatura }) => {
             </div>
           </section>
 
-          {/* BIBLIOTECA */}
           <section>
             <h3 className="text-xl font-black italic uppercase tracking-wider mb-8">Repositorio de Recursos</h3>
             <div className="bg-[#111] border border-white/5 rounded-[32px] overflow-hidden shadow-2xl">
@@ -240,6 +300,7 @@ const MateriaDetallePage = ({ asignatura }) => {
                     name={recurso.nombre} 
                     type={recurso.tipo?.toUpperCase() || 'DOC'} 
                     isLast={index === recursos.length - 1} 
+                    onDelete={() => handleEliminarRecurso(recurso.id, recurso.nombre)}
                   />
                 ))
               ) : (
@@ -251,7 +312,6 @@ const MateriaDetallePage = ({ asignatura }) => {
           </section>
         </div>
 
-        {/* SIDEBAR ANALÍTICO */}
         <div className="space-y-8">
           <div className="bg-[#111] border border-white/5 rounded-[32px] p-8 shadow-2xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -293,11 +353,18 @@ const MateriaDetallePage = ({ asignatura }) => {
         asignatura={asignatura} 
         onRecursoCreado={cargarDatos} 
       />
+
+      <ModalEditarAsignatura 
+        isOpen={modalEditarAbierto} 
+        onClose={() => setModalEditarAbierto(false)} 
+        asignatura={asignatura} 
+        onAsignaturaActualizada={handleAsignaturaActualizada} 
+      />
     </div>
   );
 };
 
-// COMPONENTES AUXILIARES
+// Subcomponentes auxiliares...
 const StatCard = ({ label, value, sub, color }) => (
   <div className="bg-[#111111] border border-white/5 p-6 sm:p-8 rounded-[32px] hover:border-white/20 transition-all group shadow-xl">
     <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.2em] mb-4 group-hover:text-gray-400 transition-colors">{label}</p>
@@ -341,14 +408,23 @@ const FlashcardItem = ({ title, count, progress, color, onClick }) => (
   </div>
 );
 
-const ResourceItem = ({ icon, name, type, isLast }) => (
-  <div className={`p-6 flex items-center justify-between hover:bg-white/[0.03] transition-all cursor-pointer group ${!isLast ? 'border-b border-white/5' : ''}`}>
+const ResourceItem = ({ icon, name, type, isLast, onDelete }) => (
+  <div className={`p-6 flex items-center justify-between hover:bg-white/[0.03] transition-all group ${!isLast ? 'border-b border-white/5' : ''}`}>
     <div className="flex items-center gap-5">
       <div className="text-gray-600 group-hover:text-indigo-400 group-hover:scale-110 transition-all">{icon}</div>
       <span className="text-xs sm:text-sm font-bold text-gray-500 group-hover:text-gray-200 transition-colors">{name}</span>
     </div>
     <div className="flex items-center gap-4">
         <span className="text-[8px] font-black text-gray-700 tracking-[0.3em] uppercase bg-white/5 px-2 py-1 rounded group-hover:text-indigo-500 transition-colors">{type}</span>
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="p-2 text-gray-800 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+        >
+          <Trash2 size={14} />
+        </button>
     </div>
   </div>
 );

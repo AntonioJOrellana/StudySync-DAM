@@ -25,5 +25,12 @@ export const flashcardService = {
     
     if (!response.ok) throw new Error("Error en el servidor de IA");
     return await response.json();
+  },
+  async eliminar(id) {
+    const response = await fetch(`${API_BASE_URL}/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error("Error al eliminar la flashcard");
+    return true;
   }
 };

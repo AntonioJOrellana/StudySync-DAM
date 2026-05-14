@@ -33,11 +33,13 @@ public class AgendaController {
     }
 
     // Eliminar un evento
-    @DeleteMapping("/eliminar/{id}")
-    public ResponseEntity<Void> eliminarEvento(@PathVariable Long id) {
-        agendaService.eliminarEvento(id);
-        // Usamos noContent (204) porque es el estándar para borrados exitosos sin
-        // retorno de datos
-        return ResponseEntity.noContent().build();
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarEvento(@PathVariable Long id) {
+    try {
+        agendaService.eliminarEvento(id); // O el método que uses en tu service
+        return ResponseEntity.ok().build();
+    } catch (Exception e) {
+        return ResponseEntity.status(500).body("Error al eliminar: " + e.getMessage());
     }
+}
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Plus, ChevronLeft, ChevronRight, X, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, X, Calendar as CalendarIcon, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { asignaturaService } from '../services/asignaturaService';
 
@@ -24,22 +24,51 @@ const CalendarPage = () => {
         asignaturaService.listarPorUsuario(userId),
         axios.get(`http://localhost:8080/api/agenda/usuario/${userId}`)
       ]);
+
+      const listaEventos = resEventos.data || [];
       setAsignaturas(resAsig.data || []);
-      setEventos(resEventos.data || []);
+      setEventos(listaEventos);
+      
+      // Sincronizar modal de día si está abierto
+      if (showModalDia && diaSeleccionado) {
+        const evsActualizados = listaEventos.filter(e => e.fechaEvento?.startsWith(diaSeleccionado.fecha));
+        setDiaSeleccionado(prev => ({ ...prev, eventos: evsActualizados }));
+      }
     } catch (error) {
       console.error("Error en la carga:", error);
+      // Si el servidor lanza 404/500 por estar vacío, reseteamos eventos sin romper el flujo
+      setEventos([]);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, showModalDia, diaSeleccionado?.fecha]);
 
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
+
+  const borrarEvento = async (idEvento) => {
+    if (!idEvento) return;
+    if (!window.confirm("¿Eliminar este evento de la agenda?")) return;
+    
+    try {
+      await axios.delete(`http://localhost:8080/api/agenda/${idEvento}`);
+      
+      // Si era el último evento del día, cerramos el modal de detalle
+      if (diaSeleccionado?.eventos.length <= 1) {
+        setShowModalDia(false);
+      }
+      
+      await cargarDatos();
+    } catch (err) {
+      console.error("Error al borrar:", err);
+      alert("No se pudo eliminar el evento. Verifica la conexión con el servidor.");
+    }
+  };
 
   const obtenerEventosProximos = () => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
     const finPeriodo = new Date(hoy);
-    finPeriodo.setDate(hoy.getDate() + 14); // Próximas 2 semanas
+    finPeriodo.setDate(hoy.getDate() + 14);
 
     return eventos.filter(ev => {
       const fechaEv = new Date(ev.fechaEvento);
@@ -54,11 +83,9 @@ const CalendarPage = () => {
 
   const generarDias = () => {
     const celdas = [];
-    // Espacios vacíos mes anterior
     for (let i = 0; i < primerDia; i++) {
       celdas.push(<div key={`empty-${i}`} className="h-24 sm:h-32 border border-white/5 bg-white/[0.01]" />);
     }
-    // Días del mes
     for (let d = 1; d <= diasEnMes; d++) {
       const fStr = `${año}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const evs = eventos.filter(e => e.fechaEvento?.startsWith(fStr));
@@ -83,7 +110,6 @@ const CalendarPage = () => {
   return (
     <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto no-scrollbar animate-in fade-in duration-500">
       
-      {/* Estilos para ocultar barras de scroll en toda la página y modales */}
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none !important; }
         .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
@@ -112,7 +138,6 @@ const CalendarPage = () => {
       </header>
 
       <div className="grid grid-cols-12 gap-6 sm:gap-8">
-        {/* CALENDARIO */}
         <div className="col-span-12 lg:col-span-9">
           <div className="bg-[#111111] border border-white/5 rounded-[32px] sm:rounded-[40px] p-4 sm:p-8 overflow-hidden shadow-2xl">
             <div className="grid grid-cols-7 mb-6 text-center text-[10px] font-black text-gray-700 uppercase tracking-[0.2em]">
@@ -124,7 +149,6 @@ const CalendarPage = () => {
           </div>
         </div>
 
-        {/* BARRA LATERAL: PRÓXIMOS EVENTOS */}
         <div className="col-span-12 lg:col-span-3 space-y-6">
           <div className="bg-[#111111] border border-white/5 rounded-[32px] p-8">
             <div className="flex items-center gap-2 mb-6">
@@ -133,12 +157,17 @@ const CalendarPage = () => {
             </div>
             <div className="space-y-5">
               {obtenerEventosProximos().length > 0 ? (
-                obtenerEventosProximos().map((ev, i) => (
-                  <div key={i} className="group relative pl-4 border-l-2 hover:border-white transition-all py-1" style={{ borderLeftColor: ev.asignatura?.color || '#6366F1' }}>
-                    <h4 className="text-xs font-black uppercase italic leading-tight group-hover:text-indigo-400 transition-colors">{ev.titulo}</h4>
-                    <p className="text-[10px] text-gray-600 font-bold uppercase mt-1">
-                      {new Date(ev.fechaEvento).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
-                    </p>
+                obtenerEventosProximos().map((ev) => (
+                  <div key={ev.id} className="group relative pl-4 border-l-2 hover:border-white transition-all py-1 flex justify-between items-start" style={{ borderLeftColor: ev.asignatura?.color || '#6366F1' }}>
+                    <div>
+                      <h4 className="text-xs font-black uppercase italic leading-tight group-hover:text-indigo-400 transition-colors">{ev.titulo}</h4>
+                      <p className="text-[10px] text-gray-600 font-bold uppercase mt-1">
+                        {new Date(ev.fechaEvento).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                      </p>
+                    </div>
+                    <button onClick={() => borrarEvento(ev.id)} className="opacity-0 group-hover:opacity-100 text-gray-700 hover:text-red-500 transition-all p-1">
+                      <Trash2 size={12} />
+                    </button>
                   </div>
                 ))
               ) : (
@@ -149,7 +178,6 @@ const CalendarPage = () => {
         </div>
       </div>
 
-      {/* MODAL CREAR EVENTO */}
       {showModalCrear && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in zoom-in duration-300">
           <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-md rounded-[40px] p-8 sm:p-10 relative shadow-2xl">
@@ -196,7 +224,6 @@ const CalendarPage = () => {
         </div>
       )}
 
-      {/* MODAL DETALLE DÍA */}
       {showModalDia && diaSeleccionado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in zoom-in duration-300">
           <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-md rounded-[40px] p-8 sm:p-10 relative">
@@ -207,13 +234,18 @@ const CalendarPage = () => {
             </div>
             <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
               {diaSeleccionado.eventos.length > 0 ? (
-                diaSeleccionado.eventos.map((ev, i) => (
-                  <div key={i} className="bg-[#111111] p-5 rounded-3xl border border-white/5 flex gap-5 items-center group hover:border-indigo-500/30 transition-all">
-                    <div className="w-1.5 h-10 rounded-full shrink-0" style={{ backgroundColor: ev.asignatura?.color }}></div>
-                    <div>
-                      <p className="font-black uppercase italic text-sm group-hover:text-indigo-400 transition-colors leading-tight">{ev.titulo}</p>
-                      <p className="text-[10px] text-gray-600 uppercase font-black mt-1 tracking-widest">{ev.asignatura?.nombre}</p>
+                diaSeleccionado.eventos.map((ev) => (
+                  <div key={ev.id} className="bg-[#111111] p-5 rounded-3xl border border-white/5 flex gap-5 items-center group hover:border-indigo-500/30 transition-all justify-between">
+                    <div className="flex gap-5 items-center">
+                        <div className="w-1.5 h-10 rounded-full shrink-0" style={{ backgroundColor: ev.asignatura?.color }}></div>
+                        <div>
+                        <p className="font-black uppercase italic text-sm group-hover:text-indigo-400 transition-colors leading-tight">{ev.titulo}</p>
+                        <p className="text-[10px] text-gray-600 uppercase font-black mt-1 tracking-widest">{ev.asignatura?.nombre}</p>
+                        </div>
                     </div>
+                    <button onClick={() => borrarEvento(ev.id)} className="text-gray-700 hover:text-red-500 transition-colors p-2">
+                        <Trash2 size={16} />
+                    </button>
                   </div>
                 ))
               ) : (

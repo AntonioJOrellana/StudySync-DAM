@@ -13,5 +13,7 @@ export const asignaturaService = {
   // NUEVO: Registrar sesión de estudio
   // El backend debe esperar un objeto con 'duracion' y el 'id' de la asignatura
   registrarSesion: (asignaturaId, duracionMinutos) => 
-    api.post(`/asignaturas/${asignaturaId}/sesiones`, { duracion: duracionMinutos })
+    api.post(`/asignaturas/${asignaturaId}/sesiones`, { duracion: duracionMinutos }),
+
+  actualizar: (id, data) => api.put(`/asignaturas/${id}`, data)
 };

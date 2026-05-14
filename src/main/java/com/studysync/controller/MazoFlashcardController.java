@@ -36,61 +36,71 @@ public class MazoFlashcardController {
     }
 
     @PostMapping
-    public ResponseEntity<MazoFlashcard> crearMazo(@RequestBody Map<String, Object> payload) {
+        public ResponseEntity<MazoFlashcard> crearMazo(@RequestBody Map<String, Object> payload) {
+            try {
+                // 1. Extraer y validar Asignatura
+                Map<String, Object> asigMap = (Map<String, Object>) payload.get("asignatura");
+                if (asigMap == null) {
+                    System.out.println("Error: El campo 'asignatura' es nulo en el payload");
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+                }
+
+                // Buscamos el ID en 'id' o 'id_asignatura'
+                Object idAsignaturaRaw = asigMap.get("id") != null ? asigMap.get("id") : asigMap.get("id_asignatura");
+                if (idAsignaturaRaw == null) {
+                    System.out.println("Error: No se encontró ID en el objeto asignatura");
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+                }
+                Long asignaturaId = Long.valueOf(idAsignaturaRaw.toString());
+
+                // 2. Extraer y validar Usuario
+                Map<String, Object> userMap = (Map<String, Object>) payload.get("usuario");
+                if (userMap == null || userMap.get("id") == null) {
+                    System.out.println("Error: El campo 'usuario' o su 'id' es nulo");
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+                }
+                Long usuarioId = Long.valueOf(userMap.get("id").toString());
+
+                // 3. Buscar entidades en la BD
+                Asignatura asignatura = asignaturaRepository.findById(asignaturaId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Asignatura no existe con ID: " + asignaturaId));
+
+                Usuario usuario = usuarioRepository.findById(usuarioId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Usuario no existe con ID: " + usuarioId));
+
+                // 4. Crear y configurar el nuevo mazo
+                MazoFlashcard mazo = new MazoFlashcard();
+                mazo.setNombre((String) payload.get("nombre"));
+                
+                // La descripción puede ser opcional
+                if (payload.containsKey("descripcion")) {
+                    mazo.setDescripcion((String) payload.get("descripcion"));
+                }
+                
+                mazo.setAsignatura(asignatura);
+                mazo.setUsuario(usuario);
+
+                // 5. Guardar y retornar
+                MazoFlashcard guardado = mazoRepository.save(mazo);
+                return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
+
+            } catch (ResourceNotFoundException e) {
+                System.out.println("Error de recurso: " + e.getMessage());
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            } catch (Exception e) {
+                System.out.println("Error interno al crear mazo:");
+                e.printStackTrace(); 
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            }
+    }
+
+    @DeleteMapping("/{id}")
+        public ResponseEntity<?> eliminarMazo(@PathVariable Long id) {
         try {
-            // 1. Extraer y validar Asignatura
-            Map<String, Object> asigMap = (Map<String, Object>) payload.get("asignatura");
-            if (asigMap == null) {
-                System.out.println("Error: El campo 'asignatura' es nulo en el payload");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-            }
-
-            // Buscamos el ID en 'id' o 'id_asignatura'
-            Object idAsignaturaRaw = asigMap.get("id") != null ? asigMap.get("id") : asigMap.get("id_asignatura");
-            if (idAsignaturaRaw == null) {
-                System.out.println("Error: No se encontró ID en el objeto asignatura");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-            }
-            Long asignaturaId = Long.valueOf(idAsignaturaRaw.toString());
-
-            // 2. Extraer y validar Usuario
-            Map<String, Object> userMap = (Map<String, Object>) payload.get("usuario");
-            if (userMap == null || userMap.get("id") == null) {
-                System.out.println("Error: El campo 'usuario' o su 'id' es nulo");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-            }
-            Long usuarioId = Long.valueOf(userMap.get("id").toString());
-
-            // 3. Buscar entidades en la BD
-            Asignatura asignatura = asignaturaRepository.findById(asignaturaId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Asignatura no existe con ID: " + asignaturaId));
-
-            Usuario usuario = usuarioRepository.findById(usuarioId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no existe con ID: " + usuarioId));
-
-            // 4. Crear y configurar el nuevo mazo
-            MazoFlashcard mazo = new MazoFlashcard();
-            mazo.setNombre((String) payload.get("nombre"));
-            
-            // La descripción puede ser opcional
-            if (payload.containsKey("descripcion")) {
-                mazo.setDescripcion((String) payload.get("descripcion"));
-            }
-            
-            mazo.setAsignatura(asignatura);
-            mazo.setUsuario(usuario);
-
-            // 5. Guardar y retornar
-            MazoFlashcard guardado = mazoRepository.save(mazo);
-            return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
-
-        } catch (ResourceNotFoundException e) {
-            System.out.println("Error de recurso: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            mazoRepository.deleteById(id);
+            return ResponseEntity.ok().build();
         } catch (Exception e) {
-            System.out.println("Error interno al crear mazo:");
-            e.printStackTrace(); 
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al borrar");
         }
     }
 }

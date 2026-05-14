@@ -24,6 +24,7 @@ const MainApp = () => {
   const [asignaturaActual, setAsignaturaActual] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Función para cargar materias desde la API
   const cargarMaterias = useCallback(() => {
     if (user?.id) {
       asignaturaService.listarPorUsuario(user.id)
@@ -36,13 +37,21 @@ const MainApp = () => {
             sesiones: asig.sesiones || []
           }));
           setAsignaturas(datosLimpios);
+
+          // Si estamos en una página de materia, actualizamos la referencia local
+          const pathParts = location.pathname.split('/');
+          const currentId = pathParts[pathParts.length - 1];
+          if (location.pathname.includes('/materia/')) {
+            const actualizada = datosLimpios.find(a => String(a.id) === String(currentId));
+            if (actualizada) setAsignaturaActual(actualizada);
+          }
         })
         .catch(err => {
-          console.error("Error al cargar:", err);
+          console.error("Error al cargar materias:", err);
           setAsignaturas([]); 
         });
     }
-  }, [user]);
+  }, [user, location.pathname]);
 
   useEffect(() => {
     cargarMaterias();
@@ -50,6 +59,13 @@ const MainApp = () => {
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-[#0A0A0A] text-white overflow-x-hidden">
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none !important; }
+        .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+        .custom-scrollbar::-webkit-scrollbar { display: none !important; width: 0 !important; }
+        .custom-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+      `}</style>
+
       {/* Botón menú móvil */}
       <button 
         className="md:hidden fixed top-4 right-4 z-50 p-2 bg-indigo-600 rounded-lg"
@@ -58,13 +74,14 @@ const MainApp = () => {
         {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
+      {/* SIDEBAR */}
       <aside className={`fixed md:sticky md:top-0 z-40 h-screen w-[280px] bg-[#0D0D0D] border-r border-white/5 flex flex-col transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="p-10 flex items-center gap-3 text-indigo-500 shrink-0">
           <Zap size={28} fill="currentColor" />
           <span className="text-2xl font-black tracking-tighter text-white uppercase italic">StudySync</span>
         </div>
         
-        <div className="flex-1 overflow-y-auto px-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-6 no-scrollbar">
           <nav className="space-y-1">
             <SidebarItem icon={<Home size={20}/>} label="Inicio" active={location.pathname === '/'} onClick={() => navigate('/')} />
             <SidebarItem icon={<Layers size={20}/>} label="Flashcards" active={location.pathname.startsWith('/flashcards')} onClick={() => navigate('/flashcards')} />
@@ -76,7 +93,7 @@ const MainApp = () => {
             {asignaturas.map((asig) => (
               <button 
                 key={asig.id} 
-                onClick={() => { setAsignaturaActual(asig); navigate(`/materia/${asig.id}`); }} 
+                onClick={() => { setAsignaturaActual(asig); navigate(`/materia/${asig.id}`); setIsSidebarOpen(false); }} 
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all mb-1 group ${location.pathname === `/materia/${asig.id}` ? 'bg-white/10 text-white shadow-inner' : 'hover:bg-white/5 text-gray-500'}`}
               >
                 <div className="flex items-center gap-3">
@@ -102,15 +119,28 @@ const MainApp = () => {
         </div>
       </aside>
       
-      <main className="flex-1 overflow-y-auto h-screen custom-scrollbar">
+      {/* MAIN CONTENT */}
+      <main className="flex-1 overflow-y-auto h-screen no-scrollbar">
         <Routes>
           <Route path="/" element={<Dashboard user={user} asignaturas={asignaturas} onMateriaCreada={cargarMaterias} setAsignaturaActual={setAsignaturaActual} />} />
+          
+          <Route path="/flashcards/mazo/:idMazo" element={<FlashcardsPage />} />
           <Route path="/flashcards" element={<FlashcardsPage />} />
-          <Route path="/flashcards/mazo/:id" element={<FlashcardsPage />} />
+          
           <Route path="/focus" element={<FocusModePage />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/progreso" element={<ProgresoPage />} />
-          <Route path="/materia/:id" element={<MateriaDetallePage asignatura={asignaturaActual} />} />
+
+          {/* Sincronización del Sidebar al actualizar */}
+          <Route 
+            path="/materia/:id" 
+            element={
+              <MateriaDetallePage 
+                asignatura={asignaturaActual} 
+                onAsignaturaActualizada={cargarMaterias} 
+              />
+            } 
+          />
         </Routes>
       </main>
     </div>

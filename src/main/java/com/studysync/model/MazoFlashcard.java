@@ -39,4 +39,7 @@ public class MazoFlashcard {
     @JsonIgnoreProperties("mazo")
     @ToString.Exclude
     private List<Flashcard> flashcards;
+
+    @Transient
+    private long pendientesRepaso;
 }

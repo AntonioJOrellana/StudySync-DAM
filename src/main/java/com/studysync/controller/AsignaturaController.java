@@ -77,8 +77,19 @@ public class AsignaturaController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Asignatura> editar(@PathVariable Long id, @RequestBody Asignatura detalles) {
-        detalles.setId(id);
-        return ResponseEntity.ok(asignaturaService.crear(detalles));
+        Asignatura asignaturaExistente = asignaturaService.obtenerPorId(id);
+        
+        if (asignaturaExistente != null) {
+            asignaturaExistente.setNombre(detalles.getNombre());
+            asignaturaExistente.setProfesor(detalles.getProfesor());
+            asignaturaExistente.setDescripcion(detalles.getDescripcion());
+            asignaturaExistente.setColor(detalles.getColor());
+            
+            // Usamos crear porque el service suele usar repository.save(), que actualiza si el ID existe
+            return ResponseEntity.ok(asignaturaService.crear(asignaturaExistente));
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @DeleteMapping("/{id}")

@@ -243,3 +243,14 @@
 .prepare-btn:hover {
   background-color: #218838;
 }
+
+/* Ocultar barra de scroll para Chrome, Safari y Opera */
+::-webkit-scrollbar {
+    display: none;
+}
+
+/* Ocultar para IE, Edge y Firefox */
+html {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}

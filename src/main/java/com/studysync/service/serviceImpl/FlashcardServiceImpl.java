@@ -138,13 +138,11 @@ public class FlashcardServiceImpl implements FlashcardService {
         StringBuilder sb = new StringBuilder();
         File file = new File(ruta);
         
-        // Usamos BufferedInputStream para mejorar la velocidad de lectura del archivo
         try (FileInputStream fis = new FileInputStream(file);
             XMLSlideShow ppt = new XMLSlideShow(fis)) {
             
             for (XSLFSlide slide : ppt.getSlides()) {
                 for (XSLFShape shape : slide.getShapes()) {
-                    // Verificamos si es una forma de texto de manera más directa
                     if (shape instanceof XSLFTextShape textShape) {
                         String text = textShape.getText();
                         if (text != null && !text.isBlank()) {
@@ -152,7 +150,7 @@ public class FlashcardServiceImpl implements FlashcardService {
                         }
                     }
                 }
-                sb.append("\n"); // Separador por diapositiva para ayudar a la IA
+                sb.append("\n"); 
             }
         } catch (Exception e) {
             System.err.println("Error específico en PPTX: " + e.getMessage());
@@ -167,7 +165,6 @@ public class FlashcardServiceImpl implements FlashcardService {
         return limpiarTexto(new String(java.nio.file.Files.readAllBytes(file.toPath())));
     }
 
-    // MÉTODO NUEVO: Limpia caracteres que rompen el JSON de la API
     private String limpiarTexto(String texto) {
         if (texto == null) return "";
         return texto.replace("\\", "\\\\")
@@ -180,14 +177,12 @@ public class FlashcardServiceImpl implements FlashcardService {
     }
 
     private List<Flashcard> ejecutarGeneracionIA(String prompt, MazoFlashcard mazo) {
-        // 1. Llamada a la IA (fuera del bucle de DB)
         String respuestaIA = llamarAGeminiManual(prompt);
         
         if (respuestaIA == null || respuestaIA.isBlank()) {
             return new ArrayList<>();
         }
 
-        // 2. Creamos una lista temporal en memoria
         List<Flashcard> listaParaGuardar = new ArrayList<>();
         String[] lineas = respuestaIA.split("\n");
 
@@ -195,13 +190,10 @@ public class FlashcardServiceImpl implements FlashcardService {
             if (linea.contains("|")) {
                 Flashcard f = procesarLineaIA(linea);
                 f.setMazo(mazo);
-                // Agregamos a la lista local, NO a la base de datos todavía
                 listaParaGuardar.add(f);
             }
         }
 
-        // 3. Guardado en bloque (Batch Save)
-        // Esto hace una sola transacción y es muchísimo más rápido
         if (!listaParaGuardar.isEmpty()) {
             return flashcardRepository.saveAll(listaParaGuardar);
         }
@@ -213,10 +205,9 @@ public class FlashcardServiceImpl implements FlashcardService {
     public String llamarAGeminiManual(String prompt) {
         String url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelId + ":generateContent?key=" + apiKey;
 
-        // Configuración de Timeouts para evitar cortes de conexión
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5000);
-        factory.setReadTimeout(60000); // 60 segundos de espera para la IA
+        factory.setReadTimeout(60000); 
         RestTemplate restTemplate = new RestTemplate(factory);
 
         Map<String, Object> textPart = new HashMap<>();
@@ -268,12 +259,17 @@ public class FlashcardServiceImpl implements FlashcardService {
         
         return f;
     }
+
     @Override
     public String consultarDudaGeneral(String duda) {
-    String prompt = "Actúa como un tutor académico experto. El alumno tiene la siguiente duda: " + duda + 
-                    ". Responde de forma concisa, clara y amena. Máximo 3 párrafos.";
-    
-    
-    return llamarAGeminiManual(prompt);
-}
+        String prompt = "Actúa como un tutor académico experto. El alumno tiene la siguiente duda: " + duda + 
+                        ". Responde de forma concisa, clara y amena. Máximo 3 párrafos.";
+        return llamarAGeminiManual(prompt);
+    }
+
+    // --- NUEVO: Implementado para que coincida con la interfaz ---
+    @Override
+    public void eliminar(Long id) {
+        flashcardRepository.deleteById(id);
+    }
 }

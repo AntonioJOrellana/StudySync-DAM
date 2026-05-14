@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, Plus, Layers, X, BookOpen, 
-  Flame, ArrowLeft, Play, Check, AlertCircle 
+  Flame, ArrowLeft, Play, Check, AlertCircle, MoreVertical
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { mazoService } from '../services/mazoService';
@@ -26,15 +26,25 @@ const FlashcardsPage = () => {
         mazoService.listarPorUsuario(user.id),
         asignaturaService.listarPorUsuario(user.id)
       ]);
-      const listaMazos = resMazos.data || resMazos || [];
+      const listaMazosRaw = resMazos.data || resMazos || [];
       const listaAsig = resAsig.data || resAsig || [];
-      setMazos(listaMazos);
+      
+      const mazosConConteo = await Promise.all(listaMazosRaw.map(async (m) => {
+        try {
+          const resPendientes = await flashcardService.getPendientes(m.id || m.id_mazo);
+          return { ...m, pendientesRepaso: resPendientes.length };
+        } catch (e) {
+          return { ...m, pendientesRepaso: 0 };
+        }
+      }));
+
+      setMazos(mazosConConteo);
       setAsignaturas(listaAsig);
       
       const idABuscar = idMazo || (mazoSeleccionado?.id || mazoSeleccionado?.id_mazo);
       
       if (idABuscar) {
-        const encontrado = listaMazos.find(m => 
+        const encontrado = mazosConConteo.find(m => 
           String(m.id) === String(idABuscar) || String(m.id_mazo) === String(idABuscar)
         );
         if (encontrado) setMazoSeleccionado(encontrado);
@@ -58,13 +68,31 @@ const FlashcardsPage = () => {
 
   return (
     <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto animate-in fade-in duration-500 no-scrollbar">
-      {/* Inyección de estilos para ocultar scrollbars */}
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none !important; }
-        .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
-        * { -ms-overflow-style: none !important; scrollbar-width: none !important; }
-        *::-webkit-scrollbar { display: none !important; }
-      `}</style>
+      {/* Inyección de estilos global para eliminar CUALQUIER barra de scroll */}
+    <style>{`
+    /* Ocultar barra en todos los elementos del proyecto */
+    *::-webkit-scrollbar { 
+      display: none !important; 
+      width: 0 !important; 
+      height: 0 !important; 
+    }
+    
+    * { 
+      -ms-overflow-style: none !important; 
+      scrollbar-width: none !important; 
+    }
+
+    /* Asegurar que el body no scrollee doble */
+    body, html, #root { 
+      overflow: hidden !important; 
+    }
+
+    /* Si el sidebar usa una clase de scroll de Tailwind, esto la anula */
+    .overflow-y-auto, .overflow-auto {
+      -ms-overflow-style: none !important;
+      scrollbar-width: none !important;
+    }
+  `}</style>
 
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-12">
         <div>
@@ -87,7 +115,12 @@ const FlashcardsPage = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
         {mazos.filter(m => m.nombre?.toLowerCase().includes(busqueda.toLowerCase())).map((mazo) => (
-          <MazoCard key={mazo.id || mazo.id_mazo} mazo={mazo} onClick={() => setMazoSeleccionado(mazo)} />
+          <MazoCard 
+            key={mazo.id || mazo.id_mazo} 
+            mazo={mazo} 
+            onClick={() => setMazoSeleccionado(mazo)} 
+            onRefresh={cargarDatos}
+          />
         ))}
       </div>
 
@@ -112,12 +145,6 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
   
   const [pendientes, setPendientes] = useState([]);
   const [cargandoIA, setCargandoIA] = useState(false);
-
-  const hideScrollStyle = {
-    msOverflowStyle: 'none',
-    scrollbarWidth: 'none',
-    WebkitScrollbar: { display: 'none' }
-  };
 
   useEffect(() => {
     localStorage.setItem(`fallidas_mazo_${mazoId}`, JSON.stringify(fallidas));
@@ -222,7 +249,8 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
   }
 
   return (
-    <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto animate-in slide-in-from-right duration-500 no-scrollbar" style={hideScrollStyle}>
+    <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto no-scrollbar animate-in slide-in-from-right duration-500 no-scrollbar">
+      {/* Botón Volver */}
       <button onClick={onVolver} className="flex items-center gap-3 px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[15px] mb-10 transition-all group">
         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
         <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500 group-hover:text-white">Volver</span>
@@ -321,24 +349,64 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
   );
 };
 
-const MazoCard = ({ mazo, onClick }) => {
+const MazoCard = ({ mazo, onClick, onRefresh }) => {
+  const [showMenu, setShowMenu] = useState(false);
   const asignatura = mazo.asignatura;
   const nombreAsig = asignatura?.nombre || mazo.nombreAsignatura || 'General';
   const color = asignatura?.color || '#6366f1';
 
+  const handleBorrar = async (e) => {
+    e.stopPropagation();
+    if (window.confirm(`¿Seguro que quieres borrar el mazo "${mazo.nombre}"?`)) {
+      try {
+        await mazoService.borrar(mazo.id || mazo.id_mazo);
+        onRefresh();
+      } catch (error) { console.error(error); }
+    }
+  };
+
   return (
-    <div onClick={onClick} className="bg-[#111111] border border-white/5 rounded-[32px] sm:rounded-[40px] p-8 sm:p-10 hover:border-indigo-500/30 transition-all group cursor-pointer active:scale-95">
+    <div onClick={onClick} className="bg-[#111111] border border-white/5 rounded-[32px] sm:rounded-[40px] p-8 sm:p-10 hover:border-indigo-500/30 transition-all group cursor-pointer active:scale-95 relative overflow-hidden">
+      <div className="absolute top-8 right-8 z-20">
+        <button onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-gray-500 hover:text-white transition-all">
+          <MoreVertical size={20} />
+        </button>
+        {showMenu && (
+          <div className="absolute right-0 mt-2 w-48 bg-[#1A1A1A] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <button onClick={handleBorrar} className="w-full text-left px-5 py-4 text-red-500 hover:bg-red-500/10 text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-colors">
+              <X size={14} /> Borrar Colección
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-[20px] sm:rounded-[24px] flex items-center justify-center mb-10 transition-transform group-hover:scale-110 shadow-inner" style={{ backgroundColor: `${color}10`, color: color }}>
         <Layers size={28} strokeWidth={2.5} />
       </div>
-      <h3 className="text-2xl sm:text-3xl font-black mb-3 uppercase italic group-hover:text-white transition-colors tracking-tight leading-none truncate">{mazo.nombre}</h3>
+      
+      <h3 className="text-2xl sm:text-3xl font-black mb-3 uppercase italic group-hover:text-white transition-colors tracking-tight leading-none truncate pr-10">
+        {mazo.nombre}
+      </h3>
+      
       <div className="flex items-center gap-3 mb-8">
         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
         <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600">{nombreAsig}</span>
       </div>
-      <div className="flex justify-between items-center pt-6 sm:pt-8 border-t border-white/5">
-        <span className="text-[9px] font-black text-gray-700 uppercase tracking-widest">{mazo.flashcards?.length || 0} TARJETAS</span>
-        <div className="p-2.5 bg-white/5 rounded-xl text-gray-600 group-hover:text-indigo-500 transition-all group-hover:bg-indigo-500/10"><BookOpen size={16} /></div>
+      
+      <div className="flex justify-between items-end pt-6 sm:pt-8 border-t border-white/5">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[9px] font-black text-gray-700 uppercase tracking-widest">
+            {mazo.flashcards?.length || 0} TARJETAS
+          </span>
+          {mazo.pendientesRepaso > 0 && (
+            <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest animate-pulse">
+              {mazo.pendientesRepaso} POR REPASAR
+            </span>
+          )}
+        </div>
+        <div className="p-2.5 bg-white/5 rounded-xl text-gray-600 group-hover:text-indigo-500 transition-all group-hover:bg-indigo-500/10">
+          <BookOpen size={16} />
+        </div>
       </div>
     </div>
   );

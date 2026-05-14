@@ -25,15 +25,9 @@ public class AgendaServiceImpl implements AgendaService {
 
     @Override
     public List<Agenda> listarPorUsuario(Long usuarioId) {
-        List<Agenda> eventos = agendaRepository.findByUsuario_Id(usuarioId);
-        
-        // Si no hay eventos, lanzamos la excepción personalizada
-        if (eventos.isEmpty()) {
-            throw new ResourceNotFoundException("No se encontraron eventos en la agenda para el usuario con ID: " + usuarioId);
-        }
-        
-        return eventos;
-    }
+    
+    return agendaRepository.findByUsuario_Id(usuarioId);
+    }   
 
     @Override
     public void eliminarEvento(Long id) {

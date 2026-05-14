@@ -35,6 +35,14 @@ public class Flashcard {
     @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
+    @PrePersist
+    protected void onCreate() {
+        fechaCreacion = LocalDateTime.now();
+        if (proximoRepaso == null) {
+            proximoRepaso = LocalDateTime.now();
+        }
+    }
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_mazo")
     @JsonIgnoreProperties("flashcards")

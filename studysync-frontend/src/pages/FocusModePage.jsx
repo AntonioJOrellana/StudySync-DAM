@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { Play, Square, Lightbulb, ChevronDown } from 'lucide-react';
 
@@ -9,19 +9,34 @@ const FocusModePage = () => {
   const [idSesionActual, setIdSesionActual] = useState(null);
   const [asignaturas, setAsignaturas] = useState([]);
   const [asigSeleccionada, setAsigSeleccionada] = useState(null);
-  const [sesionesHoy, setSesionesHoy] = useState([]);
+  const [todasLasSesiones, setTodasLasSesiones] = useState([]); // Cambiado para claridad
   
-  // CORRECCIÓN: Usamos la clave 'user' que es la que guarda tu AuthService
-  // y eliminamos los datos de "antonio123" para que no se mezclen.
   const usuario = JSON.parse(localStorage.getItem('user'));
+
+  // --- LÓGICA DE FILTRADO DIARIO ---
+  // Memorizamos las sesiones de hoy para que se recalculen solo cuando cambien los datos
+  const sesionesHoy = useMemo(() => {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    return todasLasSesiones.filter(s => {
+      if (!s.fechaInicio) return false;
+      const fechaSesion = new Date(s.fechaInicio);
+      fechaSesion.setHours(0, 0, 0, 0);
+      return fechaSesion.getTime() === hoy.getTime();
+    });
+  }, [todasLasSesiones]);
+
+  // Cálculo del tiempo total solo para HOY
+  const tiempoTotalHoy = useMemo(() => {
+    return sesionesHoy.reduce((acc, s) => acc + (s.duracion || s.duracion_minutos || 0), 0);
+  }, [sesionesHoy]);
 
   // --- CARGA DE DATOS ---
   const fetchDatos = useCallback(async () => {
-    // Si no hay usuario logueado, no intentamos peticiones
     if (!usuario?.id) return;
 
     try {
-      // Cargamos asignaturas del usuario actual
       const resAsig = await axios.get(`http://localhost:8080/api/asignaturas/usuario/${usuario.id}`);
       setAsignaturas(resAsig.data);
       
@@ -29,9 +44,8 @@ const FocusModePage = () => {
         setAsigSeleccionada(resAsig.data[0]);
       }
 
-      // Cargamos sesiones del usuario actual
       const resSesiones = await axios.get(`http://localhost:8080/api/sesiones/usuario/${usuario.id}`);
-      setSesionesHoy(resSesiones.data);
+      setTodasLasSesiones(resSesiones.data);
     } catch (err) {
       console.error("Error cargando datos:", err);
     }
@@ -121,7 +135,6 @@ const FocusModePage = () => {
       </header>
 
       <div className="grid grid-cols-12 gap-6 sm:gap-8">
-        
         <div className="col-span-12 lg:col-span-8 space-y-6 sm:space-y-8">
           <div className="bg-[#111111] border border-white/5 rounded-[32px] sm:rounded-[40px] p-6 sm:p-12 flex flex-col items-center relative overflow-hidden">
             <div className={`absolute top-6 sm:top-8 px-4 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-500 ${activo ? 'bg-indigo-500 text-white animate-pulse' : 'bg-white/5 text-gray-500'}`}>
@@ -178,7 +191,7 @@ const FocusModePage = () => {
             <h3 className="text-lg font-black uppercase italic tracking-tighter mb-6">Sesiones de Hoy</h3>
             <div className="space-y-3">
               {sesionesHoy.length === 0 && <p className="text-gray-700 italic text-xs text-center py-8">No hay actividad registrada hoy.</p>}
-              {[...sesionesHoy].reverse().slice(0, 5).map((s) => (
+              {[...sesionesHoy].reverse().map((s) => (
                 <div key={s.id || s.id_sesion} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-all group">
                   <div className="flex items-center gap-4">
                     <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{backgroundColor: s.asignatura?.color || '#6366F1'}}></div>
@@ -209,8 +222,8 @@ const FocusModePage = () => {
               </div>
               <div className="pt-6 border-t border-white/10">
                 <span className="text-3xl font-black italic text-white block leading-none mb-2">
-                  {Math.floor(sesionesHoy.reduce((acc, s) => acc + (s.duracion || s.duracion_minutos || 0), 0) / 60)}h{' '}
-                  {sesionesHoy.reduce((acc, s) => acc + (s.duracion || s.duracion_minutos || 0), 0) % 60}m
+                  {Math.floor(tiempoTotalHoy / 60)}h{' '}
+                  {tiempoTotalHoy % 60}m
                 </span>
                 <span className="text-white/40 text-[9px] font-black uppercase tracking-widest">Tiempo total focus</span>
               </div>
@@ -218,7 +231,7 @@ const FocusModePage = () => {
           </div>
           <div className="bg-[#111111] border border-white/5 rounded-[32px] p-8 relative overflow-hidden group">
             <div className="flex items-center gap-2 text-indigo-500 mb-4">
-              <Lightbulb size={18} />
+              <div className="animate-bounce"><Lightbulb size={18} /></div>
               <h3 className="font-black text-white uppercase text-[10px] tracking-widest">Consejo</h3>
             </div>
             <p className="text-gray-500 text-sm leading-relaxed italic relative z-10">
