@@ -35,6 +35,6 @@ spring.servlet.multipart.max-request-size=50MB
 # ==========================================
 # CONFIGURACIÓN DE GEMINI IA
 # ==========================================
-# Asegúrate de que no haya espacios al principio de la línea
-gemini.api.key=
-gemini.model=
+# Deja estas referencias así y configura los valores en tu launch.json o variables de entorno
+gemini.api.key=${GEMINI_API_KEY}
+gemini.model=${GEMINI_MODEL:gemini-3-flash-preview}

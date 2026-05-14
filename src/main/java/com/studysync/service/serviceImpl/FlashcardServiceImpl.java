@@ -41,10 +41,10 @@ public class FlashcardServiceImpl implements FlashcardService {
     @Autowired
     private MazoFlashcardRepository mazoRepository;
 
-    @Value("${gemini.api.key:AIzaSyAdm7ulDsTSSuTPlF2TWDJHmABRagTe-AY}")
+    @Value("${gemini.api.key}")
     private String apiKey;
 
-    @Value("${gemini.model:gemini-3-flash-preview}")
+    @Value("${gemini.model}")
     private String modelId;
 
     @Override
