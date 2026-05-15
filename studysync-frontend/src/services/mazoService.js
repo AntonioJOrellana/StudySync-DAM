@@ -9,5 +9,6 @@ export const mazoService = {
   listarPorAsignatura: (asigId) => axios.get(`${API_URL}/asignatura/${asigId}`),
   
   crear: (mazo) => axios.post(API_URL, mazo),
-  borrar: (id) => axios.delete(`${API_URL}/${id}`)
+  borrar: (id) => axios.delete(`${API_URL}/${id}`),
+  actualizar: (id, mazo) => axios.put(`${API_URL}/${id}`, mazo),
 };

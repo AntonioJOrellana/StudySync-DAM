@@ -20,26 +20,33 @@ public class AgendaController {
     @GetMapping("/usuario/{usuarioId}")
     public ResponseEntity<List<Agenda>> listarPorUsuario(@PathVariable Long usuarioId) {
         List<Agenda> eventos = agendaService.listarPorUsuario(usuarioId);
-        // Nota: Si el service lanza ResourceNotFoundException cuando está vacío,
-        // el ControllerAdvice ya lo manejará. Si no, esto devuelve 200 OK.
         return ResponseEntity.ok(eventos);
     }
 
     // Crear un nuevo evento
     @PostMapping("/crear")
     public ResponseEntity<Agenda> crearEvento(@RequestBody Agenda evento) {
-        // El service ya debería validar que los datos no vengan vacíos
         return ResponseEntity.ok(agendaService.crearEvento(evento));
+    }
+
+    // ACTUALIZAR un evento (Añadido para corregir el error del Modal)
+    @PutMapping("/{id}")
+    public ResponseEntity<Agenda> actualizarEvento(@PathVariable Long id, @RequestBody Agenda evento) {
+        try {
+            return ResponseEntity.ok(agendaService.actualizarEvento(id, evento));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 
     // Eliminar un evento
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarEvento(@PathVariable Long id) {
-    try {
-        agendaService.eliminarEvento(id); // O el método que uses en tu service
-        return ResponseEntity.ok().build();
-    } catch (Exception e) {
-        return ResponseEntity.status(500).body("Error al eliminar: " + e.getMessage());
+        try {
+            agendaService.eliminarEvento(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error al eliminar: " + e.getMessage());
+        }
     }
-}
 }

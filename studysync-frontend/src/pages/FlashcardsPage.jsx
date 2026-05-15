@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, Plus, Layers, X, BookOpen, 
-  Flame, ArrowLeft, Play, Check, AlertCircle, MoreVertical
+  Flame, ArrowLeft, Play, Check, AlertCircle, MoreVertical, Edit2
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { mazoService } from '../services/mazoService';
@@ -16,6 +16,8 @@ const FlashcardsPage = () => {
   const [mazos, setMazos] = useState([]);
   const [asignaturas, setAsignaturas] = useState([]);
   const [showModalCrear, setShowModalCrear] = useState(false);
+  const [showModalEditar, setShowModalEditar] = useState(false);
+  const [mazoAEditar, setMazoAEditar] = useState(null);
   const [busqueda, setBusqueda] = useState('');
   const [mazoSeleccionado, setMazoSeleccionado] = useState(null);
 
@@ -56,6 +58,11 @@ const FlashcardsPage = () => {
     cargarDatos(); 
   }, [user, idMazo]);
 
+  const abrirEditarMazo = (mazo) => {
+    setMazoAEditar(mazo);
+    setShowModalEditar(true);
+  };
+
   if (mazoSeleccionado) {
     return (
       <MazoDetalleInterno 
@@ -67,39 +74,19 @@ const FlashcardsPage = () => {
   }
 
   return (
-    <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto animate-in fade-in duration-500 no-scrollbar">
-      {/* Inyección de estilos global para eliminar CUALQUIER barra de scroll */}
-    <style>{`
-    /* Ocultar barra en todos los elementos del proyecto */
-    *::-webkit-scrollbar { 
-      display: none !important; 
-      width: 0 !important; 
-      height: 0 !important; 
-    }
-    
-    * { 
-      -ms-overflow-style: none !important; 
-      scrollbar-width: none !important; 
-    }
-
-    /* Asegurar que el body no scrollee doble */
-    body, html, #root { 
-      overflow: hidden !important; 
-    }
-
-    /* Si el sidebar usa una clase de scroll de Tailwind, esto la anula */
-    .overflow-y-auto, .overflow-auto {
-      -ms-overflow-style: none !important;
-      scrollbar-width: none !important;
-    }
-  `}</style>
+    <div className="min-h-screen bg-[#0A0A0A] text-white p-6 sm:p-10 animate-in fade-in duration-500 no-scrollbar overflow-x-hidden">
+      <style>{`
+        *::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+        * { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+        .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+      `}</style>
 
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-12">
         <div>
-          <h1 className="text-4xl sm:text-5xl font-black tracking-tighter uppercase italic leading-none">Mis Mazos</h1>
+          <h1 className="text-4xl sm:text-5xl font-black tracking-tighter uppercase italic leading-tight">Mis Mazos</h1>
           <p className="text-gray-500 text-xs sm:text-sm mt-3 font-medium tracking-wide">DOMINA TUS CONOCIMIENTOS</p>
         </div>
-        <button onClick={() => setShowModalCrear(true)} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-lg shadow-indigo-600/20 active:scale-95">
+        <button onClick={() => setShowModalCrear(true)} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-lg shadow-indigo-600/20 active:scale-95 shrink-0">
           <Plus size={18} strokeWidth={3} /> Nuevo Mazo
         </button>
       </header>
@@ -113,19 +100,29 @@ const FlashcardsPage = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pb-20">
         {mazos.filter(m => m.nombre?.toLowerCase().includes(busqueda.toLowerCase())).map((mazo) => (
           <MazoCard 
             key={mazo.id || mazo.id_mazo} 
             mazo={mazo} 
             onClick={() => setMazoSeleccionado(mazo)} 
             onRefresh={cargarDatos}
+            onEdit={() => abrirEditarMazo(mazo)}
           />
         ))}
       </div>
 
       {showModalCrear && (
         <ModalCrearMazo asignaturas={asignaturas} onClose={() => setShowModalCrear(false)} onCreated={cargarDatos} userId={user.id} />
+      )}
+
+      {showModalEditar && (
+        <ModalEditarMazo 
+          mazo={mazoAEditar} 
+          asignaturas={asignaturas} 
+          onClose={() => { setShowModalEditar(false); setMazoAEditar(null); }} 
+          onUpdated={cargarDatos} 
+        />
       )}
     </div>
   );
@@ -215,13 +212,13 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
   if (modoEstudio) {
     const tarjetaActual = pendientes.length > 0 ? pendientes[0] : fallidas[0];
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-[#0A0A0A] p-6 sm:p-10 relative no-scrollbar">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0A0A] p-6 sm:p-10 relative overflow-y-auto no-scrollbar">
         <button onClick={() => setModoEstudio(false)} className="absolute top-6 left-6 sm:top-10 sm:left-10 flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-white/5 hover:bg-red-500/10 rounded-xl sm:rounded-2xl border border-white/10 transition-all text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-red-500 z-10">
           <X size={14} /> Detener
         </button>
         {tarjetaActual ? (
-          <div className="w-full max-w-2xl text-center">
-            <div className="flex justify-center gap-2 sm:gap-4 mb-8 sm:mb-12 mt-12 sm:mt-0">
+          <div className="w-full max-w-2xl text-center py-20">
+            <div className="flex justify-center gap-2 sm:gap-4 mb-8 sm:mb-12">
               <div className="px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
                 <span className="text-indigo-400 text-[9px] sm:text-[10px] font-black uppercase italic">Pendientes: {pendientes.length}</span>
               </div>
@@ -234,11 +231,11 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
             <FlashcardStudy card={tarjetaActual} onResult={handleResultadoRepaso} />
           </div>
         ) : (
-          <div className="text-center">
+          <div className="text-center py-20">
             <div className="w-20 h-20 sm:w-24 sm:h-24 bg-green-500/10 text-green-500 rounded-[28px] sm:rounded-[32px] flex items-center justify-center mx-auto mb-8 border border-green-500/20">
               <Check size={36} strokeWidth={3} />
             </div>
-            <h2 className="text-3xl sm:text-5xl font-black italic uppercase tracking-tighter">SESIÓN COMPLETADA</h2>
+            <h2 className="text-3xl sm:text-5xl font-black italic uppercase tracking-tighter leading-tight">SESIÓN COMPLETADA</h2>
             <button onClick={() => setModoEstudio(false)} className="mt-10 sm:mt-12 bg-white text-black px-10 py-4 sm:px-12 sm:py-5 rounded-[20px] sm:rounded-[24px] font-black uppercase text-xs tracking-widest hover:invert transition-all active:scale-95">
               Volver al Mazo
             </button>
@@ -249,16 +246,15 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
   }
 
   return (
-    <div className="h-full bg-[#0A0A0A] text-white p-6 sm:p-10 overflow-y-auto no-scrollbar animate-in slide-in-from-right duration-500 no-scrollbar">
-      {/* Botón Volver */}
+    <div className="min-h-screen bg-[#0A0A0A] text-white p-6 sm:p-10 animate-in slide-in-from-right duration-500 no-scrollbar overflow-x-hidden">
       <button onClick={onVolver} className="flex items-center gap-3 px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[15px] mb-10 transition-all group">
         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
         <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500 group-hover:text-white">Volver</span>
       </button>
 
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-16 sm:mb-20">
-        <div className="max-w-3xl">
-          <h2 className="text-4xl sm:text-6xl lg:text-7xl font-black italic uppercase tracking-tighter leading-[0.9] mb-6">{mazo.nombre}</h2>
+        <div className="max-w-4xl">
+          <h2 className="text-4xl sm:text-6xl lg:text-7xl font-black italic uppercase tracking-tighter leading-tight mb-6 break-words">{mazo.nombre}</h2>
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
              <span className="px-3 py-1 bg-indigo-600/10 border border-indigo-600/20 text-indigo-400 text-[9px] font-black uppercase rounded tracking-widest">
                {mazo.asignatura?.nombre || 'General'}
@@ -266,7 +262,7 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
              <p className="text-gray-600 italic text-base sm:text-lg font-medium">{mazo.descripcion || 'Sin descripción'}</p>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 shrink-0">
           <button onClick={iniciarRepaso} className="flex items-center justify-center gap-4 px-8 py-4 sm:px-10 sm:py-5 rounded-[20px] sm:rounded-[24px] font-black text-xs uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-500 transition-all shadow-2xl shadow-indigo-600/40 active:scale-95">
             <Play size={16} fill="currentColor" /> Comenzar
           </button>
@@ -288,8 +284,8 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {fallidas.map((f, idx) => (
               <div key={idx} className="bg-gradient-to-br from-red-500/[0.03] to-transparent border border-red-500/10 p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] group hover:border-red-500/30 transition-all">
-                <p className="text-base sm:text-lg font-bold italic text-white/90 leading-tight mb-4">¿{f.anverso}?</p>
-                <div className="pt-4 border-t border-red-500/5 text-gray-500 text-sm italic">{f.reverso}</div>
+                <p className="text-base sm:text-lg font-bold italic text-white/90 leading-tight mb-4 break-words">¿{f.anverso}?</p>
+                <div className="pt-4 border-t border-red-500/5 text-gray-500 text-sm italic break-words">{f.reverso}</div>
               </div>
             ))}
           </div>
@@ -306,8 +302,8 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
             <div className="flex justify-between items-start mb-6">
               <span className="text-[9px] font-black text-indigo-500/30 uppercase tracking-[0.2em] group-hover:text-indigo-500 transition-colors">ID#{i+1}</span>
             </div>
-            <h4 className="text-xl sm:text-2xl font-bold italic mb-6 sm:mb-8 text-white/90 group-hover:text-white transition-colors">¿{card.anverso}?</h4>
-            <div className="pt-6 sm:pt-8 border-t border-white/5 text-gray-500 text-base sm:text-lg italic group-hover:text-gray-300 transition-colors">{card.reverso}</div>
+            <h4 className="text-xl sm:text-2xl font-bold italic mb-6 sm:mb-8 text-white/90 group-hover:text-white transition-colors leading-tight break-words">¿{card.anverso}?</h4>
+            <div className="pt-6 sm:pt-8 border-t border-white/5 text-gray-500 text-base sm:text-lg italic group-hover:text-gray-300 transition-colors break-words">{card.reverso}</div>
           </div>
         ))}
       </div>
@@ -320,7 +316,7 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
               <div className="w-14 h-14 sm:w-16 sm:h-16 bg-indigo-500/10 text-indigo-500 rounded-2xl sm:rounded-3xl flex items-center justify-center mb-6 sm:mb-8 border border-indigo-500/20">
                 <Flame size={28} strokeWidth={2.5} />
               </div>
-              <h3 className="text-3xl sm:text-4xl font-black italic uppercase tracking-tighter mb-4">Motor de IA</h3>
+              <h3 className="text-3xl sm:text-4xl font-black italic uppercase tracking-tighter mb-4 leading-tight">Motor de IA</h3>
               <p className="text-gray-500 text-sm font-medium">Genera flashcards automáticamente.</p>
             </div>
             
@@ -349,7 +345,7 @@ const MazoDetalleInterno = ({ mazo, onVolver, onRefresh }) => {
   );
 };
 
-const MazoCard = ({ mazo, onClick, onRefresh }) => {
+const MazoCard = ({ mazo, onClick, onRefresh, onEdit }) => {
   const [showMenu, setShowMenu] = useState(false);
   const asignatura = mazo.asignatura;
   const nombreAsig = asignatura?.nombre || mazo.nombreAsignatura || 'General';
@@ -365,14 +361,23 @@ const MazoCard = ({ mazo, onClick, onRefresh }) => {
     }
   };
 
+  const handleEdit = (e) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    onEdit();
+  };
+
   return (
-    <div onClick={onClick} className="bg-[#111111] border border-white/5 rounded-[32px] sm:rounded-[40px] p-8 sm:p-10 hover:border-indigo-500/30 transition-all group cursor-pointer active:scale-95 relative overflow-hidden">
+    <div onClick={onClick} className="bg-[#111111] border border-white/5 rounded-[32px] sm:rounded-[40px] p-8 sm:p-10 hover:border-indigo-500/30 transition-all group cursor-pointer active:scale-95 relative overflow-hidden h-full flex flex-col">
       <div className="absolute top-8 right-8 z-20">
         <button onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-gray-500 hover:text-white transition-all">
           <MoreVertical size={20} />
         </button>
         {showMenu && (
           <div className="absolute right-0 mt-2 w-48 bg-[#1A1A1A] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <button onClick={handleEdit} className="w-full text-left px-5 py-4 text-gray-400 hover:bg-white/5 hover:text-indigo-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-colors border-b border-white/5">
+              <Edit2 size={14} /> Editar Colección
+            </button>
             <button onClick={handleBorrar} className="w-full text-left px-5 py-4 text-red-500 hover:bg-red-500/10 text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-colors">
               <X size={14} /> Borrar Colección
             </button>
@@ -380,20 +385,20 @@ const MazoCard = ({ mazo, onClick, onRefresh }) => {
         )}
       </div>
 
-      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-[20px] sm:rounded-[24px] flex items-center justify-center mb-10 transition-transform group-hover:scale-110 shadow-inner" style={{ backgroundColor: `${color}10`, color: color }}>
+      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-[20px] sm:rounded-[24px] flex items-center justify-center mb-10 transition-transform group-hover:scale-110 shadow-inner shrink-0" style={{ backgroundColor: `${color}10`, color: color }}>
         <Layers size={28} strokeWidth={2.5} />
       </div>
       
-      <h3 className="text-2xl sm:text-3xl font-black mb-3 uppercase italic group-hover:text-white transition-colors tracking-tight leading-none truncate pr-10">
+      <h3 className="text-2xl sm:text-3xl font-black mb-3 uppercase italic group-hover:text-white transition-colors tracking-tight leading-tight break-words pr-10">
         {mazo.nombre}
       </h3>
       
-      <div className="flex items-center gap-3 mb-8">
+      <div className="flex items-center gap-3 mb-8 shrink-0">
         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
         <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600">{nombreAsig}</span>
       </div>
       
-      <div className="flex justify-between items-end pt-6 sm:pt-8 border-t border-white/5">
+      <div className="mt-auto flex justify-between items-end pt-6 sm:pt-8 border-t border-white/5">
         <div className="flex flex-col gap-1.5">
           <span className="text-[9px] font-black text-gray-700 uppercase tracking-widest">
             {mazo.flashcards?.length || 0} TARJETAS
@@ -433,9 +438,9 @@ const ModalCrearMazo = ({ asignaturas, onClose, onCreated, userId }) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-sm animate-in zoom-in duration-300">
-      <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-lg rounded-[32px] sm:rounded-[48px] p-8 sm:p-12 relative">
+      <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-lg rounded-[32px] sm:rounded-[48px] p-8 sm:p-12 relative overflow-y-auto max-h-[90vh] no-scrollbar">
         <button onClick={onClose} className="absolute top-6 right-6 sm:top-10 sm:right-10 text-gray-600 hover:text-white transition-colors"><X size={24}/></button>
-        <h2 className="text-3xl sm:text-4xl font-black mb-8 sm:mb-12 italic uppercase tracking-tighter">NUEVA COLECCIÓN</h2>
+        <h2 className="text-3xl sm:text-4xl font-black mb-8 sm:mb-12 italic uppercase tracking-tighter leading-tight">NUEVA COLECCIÓN</h2>
         <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
           <div className="space-y-3">
             <label className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 ml-4">TÍTULO</label>
@@ -451,6 +456,47 @@ const ModalCrearMazo = ({ asignaturas, onClose, onCreated, userId }) => {
             </select>
           </div>
           <button type="submit" className="w-full bg-indigo-600 py-5 sm:py-6 rounded-2xl sm:rounded-[28px] text-[10px] font-black text-white uppercase tracking-[0.3em] hover:bg-indigo-500 transition-all mt-4">CONFIRMAR</button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const ModalEditarMazo = ({ mazo, asignaturas, onClose, onUpdated }) => {
+  const [nombre, setNombre] = useState(mazo?.nombre || '');
+  const [asigId, setAsigId] = useState(mazo?.asignatura?.id || mazo?.asignatura?.id_asignatura || '');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await mazoService.actualizar(mazo.id || mazo.id_mazo, {
+        nombre: nombre,
+        asignatura: { id: parseInt(asigId) }
+      });
+      onUpdated();
+      onClose();
+    } catch (error) { console.error(error); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-sm animate-in zoom-in duration-300">
+      <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-lg rounded-[32px] sm:rounded-[48px] p-8 sm:p-12 relative overflow-y-auto max-h-[90vh] no-scrollbar">
+        <button onClick={onClose} className="absolute top-6 right-6 sm:top-10 sm:right-10 text-gray-600 hover:text-white transition-colors"><X size={24}/></button>
+        <h2 className="text-3xl sm:text-4xl font-black mb-8 sm:mb-12 italic uppercase tracking-tighter leading-tight">EDITAR COLECCIÓN</h2>
+        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
+          <div className="space-y-3">
+            <label className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 ml-4">TÍTULO</label>
+            <input required value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full bg-[#111111] border border-white/5 rounded-2xl sm:rounded-3xl p-5 sm:p-6 text-sm text-white outline-none focus:border-indigo-500/50 transition-all font-bold uppercase" />
+          </div>
+          <div className="space-y-3">
+            <label className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-700 ml-4">MATERIA</label>
+            <select required value={asigId} onChange={(e) => setAsigId(e.target.value)} className="w-full bg-[#111111] border border-white/5 rounded-2xl sm:rounded-3xl p-5 sm:p-6 text-sm text-white outline-none focus:border-indigo-500/50 appearance-none font-bold uppercase tracking-widest">
+              {asignaturas.map(asig => (
+                <option key={asig.id_asignatura || asig.id} value={asig.id_asignatura || asig.id}>{asig.nombre}</option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" className="w-full bg-indigo-600 py-5 sm:py-6 rounded-2xl sm:rounded-[28px] text-[10px] font-black text-white uppercase tracking-[0.3em] hover:bg-indigo-500 transition-all mt-4">GUARDAR CAMBIOS</button>
         </form>
       </div>
     </div>

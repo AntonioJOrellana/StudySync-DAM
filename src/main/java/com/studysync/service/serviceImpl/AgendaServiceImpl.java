@@ -25,9 +25,8 @@ public class AgendaServiceImpl implements AgendaService {
 
     @Override
     public List<Agenda> listarPorUsuario(Long usuarioId) {
-    
-    return agendaRepository.findByUsuario_Id(usuarioId);
-    }   
+        return agendaRepository.findByUsuario_Id(usuarioId);
+    }
 
     @Override
     public void eliminarEvento(Long id) {
@@ -36,5 +35,24 @@ public class AgendaServiceImpl implements AgendaService {
             throw new ResourceNotFoundException("No se puede eliminar: El evento con ID " + id + " no existe.");
         }
         agendaRepository.deleteById(id);
+    }
+
+    // MÉTODO AÑADIDO PARA LA EDICIÓN
+    @Override
+    public Agenda actualizarEvento(Long id, Agenda eventoDetalles) {
+        return agendaRepository.findById(id)
+                .map(eventoExistente -> {
+                    // Actualizamos los campos manteniendo la lógica de tu modelo
+                    eventoExistente.setTitulo(eventoDetalles.getTitulo());
+                    eventoExistente.setFechaEvento(eventoDetalles.getFechaEvento());
+                    eventoExistente.setAsignatura(eventoDetalles.getAsignatura());
+
+                    // Si manejas prioridad en este service, podrías añadirlo:
+                    // eventoExistente.setPrioridad(eventoDetalles.getPrioridad());
+
+                    return agendaRepository.save(eventoExistente);
+                })
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No se puede actualizar: El evento con ID " + id + " no existe."));
     }
 }
