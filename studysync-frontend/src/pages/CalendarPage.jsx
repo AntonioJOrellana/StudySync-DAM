@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Plus, ChevronLeft, ChevronRight, X, Calendar as CalendarIcon, Trash2 } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, X, Calendar as CalendarIcon, Trash2, Edit2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { asignaturaService } from '../services/asignaturaService';
+import ModalEditarEvento from '../components/ModalEditarEvento';
+import { agendaService } from '../services/agendaService';
 
 const CalendarPage = () => {
   const { user } = useAuth();
@@ -13,6 +15,10 @@ const CalendarPage = () => {
   const [showModalDia, setShowModalDia] = useState(false);
   const [diaSeleccionado, setDiaSeleccionado] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // ESTADOS PARA EDICIÓN
+  const [showModalEditar, setShowModalEditar] = useState(false);
+  const [eventoAEditar, setEventoAEditar] = useState(null);
 
   const cargarDatos = useCallback(async () => {
     const userId = user?.id?.toString().split(':')[0];
@@ -36,7 +42,6 @@ const CalendarPage = () => {
       }
     } catch (error) {
       console.error("Error en la carga:", error);
-      // Si el servidor lanza 404/500 por estar vacío, reseteamos eventos sin romper el flujo
       setEventos([]);
     } finally {
       setLoading(false);
@@ -52,16 +57,20 @@ const CalendarPage = () => {
     try {
       await axios.delete(`http://localhost:8080/api/agenda/${idEvento}`);
       
-      // Si era el último evento del día, cerramos el modal de detalle
       if (diaSeleccionado?.eventos.length <= 1) {
         setShowModalDia(false);
       }
-      
       await cargarDatos();
     } catch (err) {
       console.error("Error al borrar:", err);
-      alert("No se pudo eliminar el evento. Verifica la conexión con el servidor.");
+      alert("No se pudo eliminar el evento.");
     }
+  };
+
+  const abrirEditar = (evento, e) => {
+    if (e) e.stopPropagation(); 
+    setEventoAEditar(evento);
+    setShowModalEditar(true);
   };
 
   const obtenerEventosProximos = () => {
@@ -83,9 +92,17 @@ const CalendarPage = () => {
 
   const generarDias = () => {
     const celdas = [];
-    for (let i = 0; i < primerDia; i++) {
+    
+    // AJUSTE PARA QUE LA SEMANA EMPIECE EN LUNES (L=0, M=1... D=6)
+    // En JS: Dom=0, Lun=1, Mar=2, Mié=3, Jue=4, Vie=5, Sáb=6
+    let primerDiaAjustado = primerDia === 0 ? 6 : primerDia - 1;
+
+    // Celdas vacías del inicio
+    for (let i = 0; i < primerDiaAjustado; i++) {
       celdas.push(<div key={`empty-${i}`} className="h-24 sm:h-32 border border-white/5 bg-white/[0.01]" />);
     }
+
+    // Días del mes
     for (let d = 1; d <= diasEnMes; d++) {
       const fStr = `${año}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const evs = eventos.filter(e => e.fechaEvento?.startsWith(fStr));
@@ -140,8 +157,9 @@ const CalendarPage = () => {
       <div className="grid grid-cols-12 gap-6 sm:gap-8">
         <div className="col-span-12 lg:col-span-9">
           <div className="bg-[#111111] border border-white/5 rounded-[32px] sm:rounded-[40px] p-4 sm:p-8 overflow-hidden shadow-2xl">
+            {/* ENCABEZADO CORREGIDO: Empieza en Lunes, termina en Domingo */}
             <div className="grid grid-cols-7 mb-6 text-center text-[10px] font-black text-gray-700 uppercase tracking-[0.2em]">
-              {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => <div key={d}>{d}</div>)}
+              {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(d => <div key={d}>{d}</div>)}
             </div>
             <div className="grid grid-cols-7 border border-white/5 rounded-2xl overflow-hidden">
               {generarDias()}
@@ -165,9 +183,14 @@ const CalendarPage = () => {
                         {new Date(ev.fechaEvento).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                       </p>
                     </div>
-                    <button onClick={() => borrarEvento(ev.id)} className="opacity-0 group-hover:opacity-100 text-gray-700 hover:text-red-500 transition-all p-1">
-                      <Trash2 size={12} />
-                    </button>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <button onClick={(e) => abrirEditar(ev, e)} className="text-gray-700 hover:text-indigo-500 p-1">
+                        <Edit2 size={12} />
+                      </button>
+                      <button onClick={() => borrarEvento(ev.id)} className="text-gray-700 hover:text-red-500 p-1">
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -178,6 +201,7 @@ const CalendarPage = () => {
         </div>
       </div>
 
+      {/* MODAL CREAR */}
       {showModalCrear && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in zoom-in duration-300">
           <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-md rounded-[40px] p-8 sm:p-10 relative shadow-2xl">
@@ -211,8 +235,8 @@ const CalendarPage = () => {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-gray-600 tracking-widest ml-1">Materia</label>
                   <select name="asig" required className="w-full bg-[#111111] border border-white/5 rounded-2xl p-4 text-xs text-white outline-none appearance-none">
-                    <option value="">Elegir...</option>
-                    {asignaturas.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+                    <option value="" className="bg-[#111] text-white">Elegir...</option>
+                    {asignaturas.map(a => <option key={a.id} value={a.id} className="bg-[#111] text-white">{a.nombre}</option>)}
                   </select>
                 </div>
               </div>
@@ -224,6 +248,7 @@ const CalendarPage = () => {
         </div>
       )}
 
+      {/* MODAL DETALLE DÍA */}
       {showModalDia && diaSeleccionado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in zoom-in duration-300">
           <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-md rounded-[40px] p-8 sm:p-10 relative">
@@ -243,9 +268,14 @@ const CalendarPage = () => {
                         <p className="text-[10px] text-gray-600 uppercase font-black mt-1 tracking-widest">{ev.asignatura?.nombre}</p>
                         </div>
                     </div>
-                    <button onClick={() => borrarEvento(ev.id)} className="text-gray-700 hover:text-red-500 transition-colors p-2">
-                        <Trash2 size={16} />
-                    </button>
+                    <div className="flex gap-2">
+                        <button onClick={(e) => abrirEditar(ev, e)} className="text-gray-700 hover:text-indigo-500 transition-colors p-2">
+                            <Edit2 size={16} />
+                        </button>
+                        <button onClick={() => borrarEvento(ev.id)} className="text-gray-700 hover:text-red-500 transition-colors p-2">
+                            <Trash2 size={16} />
+                        </button>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -257,6 +287,18 @@ const CalendarPage = () => {
           </div>
         </div>
       )}
+
+      <ModalEditarEvento 
+        isOpen={showModalEditar}
+        onClose={() => {
+          setShowModalEditar(false);
+          setEventoAEditar(null);
+        }}
+        evento={eventoAEditar}
+        asignaturas={asignaturas}
+        onEventoActualizado={cargarDatos}
+      />
+
     </div>
   );
 };

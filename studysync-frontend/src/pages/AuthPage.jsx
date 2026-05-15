@@ -9,7 +9,6 @@ const AuthPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // CORRECCIÓN: 'username' en lugar de 'nombre' para coincidir con el Modelo Java
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -23,17 +22,13 @@ const AuthPage = () => {
     
     try {
       const endpoint = isLogin ? '/usuarios/login' : '/usuarios/registrar';
-      
-      // Enviamos el formData que ahora contiene 'username'
       const res = await axios.post(`http://localhost:8080/api${endpoint}`, formData);
       
-      // Simula un pequeño retraso para la animación de carga
       setTimeout(() => {
         login(res.data);
       }, 800);
     } catch (err) {
       setLoading(false);
-      // Capturamos el mensaje de error del backend si existe
       setError(err.response?.data || 'Error en la autenticación. Revisa tus datos.');
     }
   };
@@ -51,11 +46,11 @@ const AuthPage = () => {
           <div className="w-20 h-20 bg-white/5 rounded-[28px] flex items-center justify-center border border-white/10 mb-8 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500">
             <Zap size={38} className="text-indigo-500 fill-indigo-500" />
           </div>
-          <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter">
-            {isLogin ? 'StudySync' : 'Join the Era'}
+          <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter text-center">
+            {isLogin ? 'StudySync' : 'Únete a studysync'}
           </h2>
-          <p className="text-gray-500 mt-3 text-xs font-black uppercase tracking-[0.2em]">
-            {isLogin ? 'Ingreso al Sistema Core' : 'Crea tu Identidad Académica'}
+          <p className="text-gray-500 mt-3 text-xs font-black uppercase tracking-[0.2em] text-center">
+            {isLogin ? 'Bienvenido a tu aplicacion de estudio' : 'Crea tu usuario'}
           </p>
           
           {error && (
@@ -77,7 +72,6 @@ const AuthPage = () => {
                   type="text" 
                   placeholder="IDENTIDAD" 
                   className="w-full bg-[#161616] border border-white/5 rounded-2xl py-5 pl-16 pr-8 text-white focus:outline-none focus:border-indigo-500/50 text-sm font-bold transition-all placeholder:text-gray-800"
-                  // CORRECCIÓN: Mapeo a 'username'
                   onChange={(e) => setFormData({...formData, username: e.target.value})}
                 />
               </div>
@@ -85,7 +79,7 @@ const AuthPage = () => {
           )}
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-5">Email Académico</label>
+            <label className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] ml-5">Email</label>
             <div className="relative group">
               <Mail className="absolute left-6 top-5 text-gray-600 group-focus-within:text-indigo-500 transition-colors" size={18} />
               <input 
@@ -121,7 +115,7 @@ const AuthPage = () => {
               <Loader2 className="animate-spin" size={20} />
             ) : (
               <>
-                {isLogin ? 'Acceder al Panel' : 'Finalizar Registro'} 
+                {isLogin ? 'Acceder' : 'Crear cuenta'} 
                 <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </>
             )}
@@ -132,11 +126,11 @@ const AuthPage = () => {
         <button 
           onClick={() => {
             setIsLogin(!isLogin);
-            setError(''); // Limpiamos errores al cambiar
+            setError(''); 
           }} 
           className="w-full mt-10 text-[10px] text-gray-600 font-black uppercase tracking-[0.2em] hover:text-indigo-400 transition-colors"
         >
-          {isLogin ? '¿No tienes cuenta? Desplegar Registro' : '¿Ya eres miembro? Iniciar Sesión'}
+          {isLogin ? '¿No tienes cuenta? Regístrate aquí' : '¿Ya eres miembro? Iniciar Sesión'}
         </button>
       </div>
     </div>

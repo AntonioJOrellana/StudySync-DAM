@@ -21,5 +21,14 @@ export const agendaService = {
   // Eliminar un evento
   async eliminarEvento(id) {
     await fetch(`${API_BASE_URL}/eliminar/${id}`, { method: 'DELETE' });
+  },
+  async actualizarEvento(id, evento) {
+    const response = await fetch(`${API_BASE_URL}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(evento),
+    });
+    if (!response.ok) throw new Error("Error al actualizar el evento");
+    return await response.json();
   }
 };
